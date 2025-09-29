@@ -1,0 +1,42 @@
+<UserControl
+	xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:vm="using:VideoTagger.ViewModels"
+	xmlns:fctls="using:FluentAvalonia.UI.Controls"
+  mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+  x:Class="VideoTagger.Views.SettingsPageView"
+	x:DataType="vm:SettingsPageViewModel">
+
+	<Grid Margin="10">
+		<HeaderedContentControl Header="Categories">
+			<Grid RowDefinitions="*,auto">
+				<ListBox ItemsSource="{Binding MainModel.Categories}"
+								 SelectedItem="{Binding SelectedCategory}"
+								 IsVisible="{Binding MainModel.Categories.Count}">
+					<ListBox.ItemTemplate>
+						<DataTemplate>
+							<TextBlock Text="{Binding Name}"/>
+						</DataTemplate>
+					</ListBox.ItemTemplate>
+				</ListBox>
+				<TextBlock IsVisible="{Binding !MainModel.Categories.Count}"
+									 HorizontalAlignment="Center" VerticalAlignment="Center"
+									 Foreground="{DynamicResource SystemFillColorSolidNeutralBrush}">
+					(no cateories)
+				</TextBlock>
+
+				<StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10">
+					<Button Command="{Binding AddNewCategoryCommand}">
+						<fctls:SymbolIcon Symbol="Add"/>
+					</Button>
+					<Button Command="{Binding RemoveSelectedCateogoryCommand}">
+						<fctls:SymbolIcon Symbol="Remove"/>
+					</Button>
+				</StackPanel>
+			</Grid>
+		</HeaderedContentControl>
+	</Grid>
+
+</UserControl>

@@ -1,0 +1,32 @@
+<fwnd:AppWindow
+	xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:vm="using:VideoTagger.ViewModels"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+	xmlns:fctls="using:FluentAvalonia.UI.Controls"
+	xmlns:fwnd="using:FluentAvalonia.UI.Windowing"
+	xmlns:views="using:VideoTagger.Views"
+  mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+  x:Class="VideoTagger.Views.MainWindow"
+	x:Name="RootWindow"
+  x:DataType="vm:MainWindowViewModel"
+  Icon="/Assets/avalonia-logo.ico"
+  Title="Video Tagger">
+
+	<Grid RowDefinitions="auto, *">
+		<fctls:CommandBar OverflowButtonVisibility="Collapsed" IsOpen="True" IsSticky="True"
+											IsDynamicOverflowEnabled="False">
+			<fctls:CommandBar.PrimaryCommands>
+				<fctls:CommandBarToggleButton IconSource="Settings" Label="Settings"
+																			IsChecked="{Binding ShowSettingsPage, Mode=OneWay}"
+																			Command="{Binding SelectSettingsPageCommand}"/>
+			</fctls:CommandBar.PrimaryCommands>
+		</fctls:CommandBar>
+
+		<views:SettingsPageView x:Name="SettingsPageView" Grid.Row="1"
+														IsVisible="{Binding #RootWindow.DataContext.ShowSettingsPage}"
+														Background="Transparent"/>
+	</Grid>
+
+</fwnd:AppWindow>
