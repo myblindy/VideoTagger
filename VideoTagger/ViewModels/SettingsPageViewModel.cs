@@ -1,5 +1,7 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using ReactiveUI;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using VideoTagger.Models;
@@ -7,15 +9,36 @@ using VideoTagger.Services;
 
 namespace VideoTagger.ViewModels;
 
-public sealed partial class SettingsPageViewModel(
-    MainModel mainModel, DbService dbService, DialogService dialogService)
-    : ViewModelBase
+public sealed partial class SettingsPageViewModel : ViewModelBase
 {
+    readonly MainModel mainModel;
+    readonly DbService dbService;
+    readonly DialogService dialogService;
+
+    public SettingsPageViewModel(MainModel mainModel, DbService dbService, DialogService dialogService)
+    {
+        this.mainModel = mainModel;
+        this.dbService = dbService;
+        this.dialogService = dialogService;
+
+        this.WhenAnyValue(x => x.SelectedCategoryItem!.IsBoolean).Subscribe(_ =>
+        {
+            AddNewCategoryItemEnumValueCommand.NotifyCanExecuteChanged();
+            RemoveSelectedCateogoryEnumValueCommand.NotifyCanExecuteChanged();
+            MoveSelectedCategoryDownEnumValueCommand.NotifyCanExecuteChanged();
+            MoveSelectedCategoryUpEnumValueCommand.NotifyCanExecuteChanged();
+        });
+    }
+
     public MainModel MainModel => mainModel;
 
+    #region Categories
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(RemoveSelectedCateogoryCommand))]
+    [NotifyCanExecuteChangedFor(nameof(RemoveSelectedCateogoryCommand), nameof(MoveSelectedCategoryDownCommand), nameof(MoveSelectedCategoryUpCommand))]
     public partial MainModelCategory? SelectedCategory { get; set; }
+
+    partial void OnSelectedCategoryChanged(MainModelCategory? value) =>
+        SelectedCategoryItem = value?.Items.FirstOrDefault();
 
     [RelayCommand]
     async Task AddNewCategory()
@@ -23,9 +46,10 @@ public sealed partial class SettingsPageViewModel(
         if (await dialogService.InputValue<string>("New Category") is { } newCategory)
         {
             var anyChanged = false;
-            if (!MainModel.Categories.Any(c => c.Name.Equals(newCategory, System.StringComparison.CurrentCultureIgnoreCase)))
+            if (!MainModel.Categories.Any(c => c.Name.Equals(newCategory, StringComparison.CurrentCultureIgnoreCase)))
             {
                 MainModel.Categories.Add(new() { Name = newCategory });
+                SelectedCategory = MainModel.Categories[^1];
                 anyChanged = true;
             }
 
@@ -39,7 +63,7 @@ public sealed partial class SettingsPageViewModel(
     {
         if (SelectedCategory is null) return;
 
-        if(await dialogService.Question("Remove Category", $"Are you sure you want to remove the category '{SelectedCategory.Name}'?"))
+        if (await dialogService.Question("Remove Category", $"Are you sure you want to remove the category '{SelectedCategory.Name}'?"))
         {
             MainModel.Categories.Remove(SelectedCategory);
             dbService.WriteMainModel(MainModel);
@@ -49,4 +73,233 @@ public sealed partial class SettingsPageViewModel(
 
     bool CanRemoveSelectedCateogory() =>
         SelectedCategory is not null;
+
+    [RelayCommand(CanExecute = nameof(CanMoveSelectedCategoryUp))]
+    void MoveSelectedCategoryUp()
+    {
+        if (SelectedCategory is null) return;
+
+        var index = MainModel.Categories.IndexOf(SelectedCategory);
+        if (index > 0)
+        {
+            var category = SelectedCategory;
+            MainModel.Categories.RemoveAt(index);
+            MainModel.Categories.Insert(index - 1, category);
+            dbService.WriteMainModel(MainModel);
+            SelectedCategory = category;
+        }
+    }
+
+    bool CanMoveSelectedCategoryUp() =>
+        SelectedCategory is not null && MainModel.Categories.IndexOf(SelectedCategory) > 0;
+
+    [RelayCommand(CanExecute = nameof(CanMoveSelectedCategoryDown))]
+    void MoveSelectedCategoryDown()
+    {
+        if (SelectedCategory is null) return;
+
+        var index = MainModel.Categories.IndexOf(SelectedCategory);
+        if (index < MainModel.Categories.Count - 1)
+        {
+            var category = SelectedCategory;
+            MainModel.Categories.RemoveAt(index);
+            MainModel.Categories.Insert(index + 1, category);
+            dbService.WriteMainModel(MainModel);
+            SelectedCategory = category;
+        }
+    }
+
+    bool CanMoveSelectedCategoryDown() =>
+        SelectedCategory is not null && MainModel.Categories.IndexOf(SelectedCategory) < MainModel.Categories.Count - 1;
+    #endregion
+
+    #region Category Items
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RemoveSelectedCategoryItemCommand), nameof(MoveSelectedCategoryItemDownCommand), nameof(MoveSelectedCategoryItemUpCommand))]
+    public partial MainModelCategoryItem? SelectedCategoryItem { get; set; }
+
+    partial void OnSelectedCategoryItemChanged(MainModelCategoryItem? value) =>
+        SelectedCategoryItemEnumValue = value?.EnumValues.FirstOrDefault();
+
+    [RelayCommand]
+    async Task AddNewCategoryItem()
+    {
+        if (SelectedCategory is null) return;
+
+        if (await dialogService.InputValue<string>("New Category Item") is { } newCategoryItem)
+        {
+            var anyChanged = false;
+            if (!SelectedCategory.Items.Any(i => i.Name.Equals(newCategoryItem, StringComparison.CurrentCultureIgnoreCase)))
+            {
+                SelectedCategory.Items.Add(new() { Name = newCategoryItem, IsBoolean = true });
+                SelectedCategoryItem = SelectedCategory.Items[^1];
+                anyChanged = true;
+            }
+            if (anyChanged)
+                dbService.WriteMainModel(MainModel);
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRemoveSelectedCategoryItem))]
+    async Task RemoveSelectedCategoryItem()
+    {
+        if (SelectedCategory is null || SelectedCategoryItem is null) return;
+
+        if (await dialogService.Question("Remove Category Item", $"Are you sure you want to remove the category item '{SelectedCategoryItem.Name}' for '{SelectedCategory.Name}'?"))
+        {
+            SelectedCategory.Items.Remove(SelectedCategoryItem);
+            dbService.WriteMainModel(MainModel);
+            SelectedCategoryItem = null;
+        }
+    }
+    bool CanRemoveSelectedCategoryItem() =>
+        SelectedCategoryItem is not null;
+
+    [RelayCommand(CanExecute = nameof(CanMoveSelectedCategoryItemUp))]
+    void MoveSelectedCategoryItemUp()
+    {
+        if (SelectedCategory is null || SelectedCategoryItem is null) return;
+        var index = SelectedCategory.Items.IndexOf(SelectedCategoryItem);
+        if (index > 0)
+        {
+            var categoryItem = SelectedCategoryItem;
+            SelectedCategory.Items.RemoveAt(index);
+            SelectedCategory.Items.Insert(index - 1, categoryItem);
+            dbService.WriteMainModel(MainModel);
+            SelectedCategoryItem = categoryItem;
+        }
+    }
+    bool CanMoveSelectedCategoryItemUp() =>
+        SelectedCategoryItem is not null && SelectedCategory is not null && SelectedCategory.Items.IndexOf(SelectedCategoryItem) > 0;
+
+    [RelayCommand(CanExecute = nameof(CanMoveSelectedCategoryItemDown))]
+    void MoveSelectedCategoryItemDown()
+    {
+        if (SelectedCategory is null || SelectedCategoryItem is null) return;
+        var index = SelectedCategory.Items.IndexOf(SelectedCategoryItem);
+        if (index < SelectedCategory.Items.Count - 1)
+        {
+            var categoryItem = SelectedCategoryItem;
+            SelectedCategory.Items.RemoveAt(index);
+            SelectedCategory.Items.Insert(index + 1, categoryItem);
+            dbService.WriteMainModel(MainModel);
+            SelectedCategoryItem = categoryItem;
+        }
+    }
+    bool CanMoveSelectedCategoryItemDown() =>
+        SelectedCategoryItem is not null && SelectedCategory is not null && SelectedCategory.Items.IndexOf(SelectedCategoryItem) < SelectedCategory.Items.Count - 1;
+    #endregion
+
+    #region Category Item Enum Values
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RemoveSelectedCateogoryEnumValueCommand), nameof(MoveSelectedCategoryDownEnumValueCommand), nameof(MoveSelectedCategoryUpEnumValueCommand))]
+    public partial string? SelectedCategoryItemEnumValue { get; set; }
+
+    [RelayCommand(CanExecute = nameof(CanAddNewCategoryItemEnumValue))]
+    async Task AddNewCategoryItemEnumValue()
+    {
+        if (SelectedCategoryItem is null) return;
+
+        if (await dialogService.InputValue<string>("New Enum Value") is { } newEnumValue)
+        {
+            var anyChanged = false;
+            if (!SelectedCategoryItem.EnumValues.Any(ev => ev.Equals(newEnumValue, StringComparison.CurrentCultureIgnoreCase)))
+            {
+                SelectedCategoryItem.EnumValues.Add(newEnumValue);
+                SelectedCategoryItemEnumValue = newEnumValue;
+                anyChanged = true;
+            }
+            if (anyChanged)
+                dbService.WriteMainModel(MainModel);
+        }
+    }
+    bool CanAddNewCategoryItemEnumValue() =>
+        SelectedCategoryItem is not null && !SelectedCategoryItem.IsBoolean;
+
+    [RelayCommand(CanExecute = nameof(CanRemoveSelectedCateogoryEnumValue))]
+    async Task RemoveSelectedCateogoryEnumValue()
+    {
+        if (SelectedCategory is null || SelectedCategoryItem is null || SelectedCategoryItemEnumValue is null) return;
+
+        if (await dialogService.Question("Remove Enum Value", $"Are you sure you want to remove the enum value '{SelectedCategoryItemEnumValue}' for '{SelectedCategoryItem.Name}' under the category '{SelectedCategory.Name}'?"))
+        {
+            SelectedCategoryItem.EnumValues.Remove(SelectedCategoryItemEnumValue);
+            dbService.WriteMainModel(MainModel);
+            SelectedCategoryItemEnumValue = null;
+        }
+    }
+    bool CanRemoveSelectedCateogoryEnumValue() =>
+        SelectedCategoryItem is not null && SelectedCategoryItemEnumValue is not null && !SelectedCategoryItem.IsBoolean;
+
+    [RelayCommand(CanExecute = nameof(CanMoveSelectedCategoryUpEnumValue))]
+    void MoveSelectedCategoryUpEnumValue()
+    {
+        if (SelectedCategoryItem is null || SelectedCategoryItemEnumValue is null) return;
+        var index = SelectedCategoryItem.EnumValues.IndexOf(SelectedCategoryItemEnumValue);
+        if (index > 0)
+        {
+            var enumValue = SelectedCategoryItemEnumValue;
+            SelectedCategoryItem.EnumValues.RemoveAt(index);
+            SelectedCategoryItem.EnumValues.Insert(index - 1, enumValue);
+            dbService.WriteMainModel(MainModel);
+            SelectedCategoryItemEnumValue = enumValue;
+        }
+    }
+    bool CanMoveSelectedCategoryUpEnumValue() =>
+        SelectedCategoryItem is not null && SelectedCategoryItemEnumValue is not null && !SelectedCategoryItem.IsBoolean && SelectedCategoryItem.EnumValues.IndexOf(SelectedCategoryItemEnumValue) > 0;
+
+    [RelayCommand(CanExecute = nameof(CanMoveSelectedCategoryDownEnumValue))]
+    void MoveSelectedCategoryDownEnumValue()
+    {
+        if (SelectedCategoryItem is null || SelectedCategoryItemEnumValue is null) return;
+        var index = SelectedCategoryItem.EnumValues.IndexOf(SelectedCategoryItemEnumValue);
+        if (index < SelectedCategoryItem.EnumValues.Count - 1)
+        {
+            var enumValue = SelectedCategoryItemEnumValue;
+            SelectedCategoryItem.EnumValues.RemoveAt(index);
+            SelectedCategoryItem.EnumValues.Insert(index + 1, enumValue);
+            dbService.WriteMainModel(MainModel);
+            SelectedCategoryItemEnumValue = enumValue;
+        }
+    }
+    bool CanMoveSelectedCategoryDownEnumValue() =>
+        SelectedCategoryItem is not null && SelectedCategoryItemEnumValue is not null && !SelectedCategoryItem.IsBoolean && SelectedCategoryItem.EnumValues.IndexOf(SelectedCategoryItemEnumValue) < SelectedCategoryItem.EnumValues.Count - 1;
+    #endregion
+
+    #region Folders
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RemoveSelectedFolderCommand))]
+    public partial MainModelFolder? SelectedFolder { get; set; }
+
+    [RelayCommand]
+    async Task AddNewFolder()
+    {
+        if (await dialogService.SelectFolder() is { } folder)
+        {
+            var anyChanged = false;
+            if (!MainModel.Folders.Any(f => f.Path == folder.Path.LocalPath))
+            {
+                MainModel.Folders.Add(new() { Path = folder.Path.LocalPath });
+                SelectedFolder = MainModel.Folders[^1];
+                anyChanged = true;
+            }
+            if (anyChanged)
+                dbService.WriteMainModel(MainModel);
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRemoveSelectedFolder))]
+    async Task RemoveSelectedFolder()
+    {
+        if (SelectedFolder is null) return;
+        if (await dialogService.Question("Remove Folder", $"Are you sure you want to remove the folder '{SelectedFolder.Path}'?"))
+        {
+            MainModel.Folders.Remove(SelectedFolder);
+            dbService.WriteMainModel(MainModel);
+            SelectedFolder = null;
+        }
+    }
+    bool CanRemoveSelectedFolder() =>
+        SelectedFolder is not null;
+    #endregion
 }

@@ -1,6 +1,8 @@
 ﻿using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Dialogs;
+using FluentAvalonia.UI.Windowing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Simple.Avalonia.Hosting;
@@ -51,6 +53,7 @@ internal sealed partial class Program
             .UsePlatformDetect()
             .WithInterFont()
             .LogToTrace()
+            .UseManagedSystemDialogs<AppWindow>()
             .AfterSetup(builder =>
             {
                 // The ApplicationLifetime is null when using the previewer.

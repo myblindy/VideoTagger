@@ -15,13 +15,14 @@ public sealed class DbService : IHostedService
 {
     readonly ILiteDatabase db;
     readonly ILiteCollection<MainModelCategory> categoriesCollection;
+    readonly ILiteCollection<MainModelFolder> foldersCollection;
 
     public DbService()
     {
         var dbPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "VideoTagger", "videotagger.db");
-        Directory.CreateDirectory(System.IO.Path.GetDirectoryName(dbPath)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
 
         db = new LiteDatabase(new ConnectionString(dbPath)
         {
@@ -30,18 +31,24 @@ public sealed class DbService : IHostedService
             Upgrade = true
         });
         categoriesCollection = db.GetCollection<MainModelCategory>();
+        foldersCollection = db.GetCollection<MainModelFolder>();
     }
 
     public void FillMainModel(MainModel mainModel)
     {
         mainModel.Categories.Clear();
         mainModel.Categories.AddRange(categoriesCollection.FindAll());
+
+        mainModel.Folders.Clear();
+        mainModel.Folders.AddRange(foldersCollection.FindAll());
     }
 
     public void WriteMainModel(MainModel mainModel)
     {
         categoriesCollection.DeleteAll();
         categoriesCollection.InsertBulk(mainModel.Categories);
+        foldersCollection.DeleteAll();
+        foldersCollection.InsertBulk(mainModel.Folders);
     }
 
     public Task StartAsync(CancellationToken cancellationToken) =>

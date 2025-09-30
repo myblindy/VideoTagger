@@ -8,4 +8,7 @@ public partial class InputValueDialogView : UserControl
     {
         InitializeComponent();
     }
+
+    void OnLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e) =>
+        TextBox.Focus();
 }

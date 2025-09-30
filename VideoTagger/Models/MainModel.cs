@@ -6,6 +6,7 @@ namespace VideoTagger.Models;
 public sealed partial class MainModel : ObservableObject
 {
     public ObservableCollection<MainModelCategory> Categories { get; } = [];
+    public ObservableCollection<MainModelFolder> Folders { get; } = [];
 }
 
 public sealed partial class MainModelCategory : ObservableObject
@@ -15,4 +16,28 @@ public sealed partial class MainModelCategory : ObservableObject
 
     [ObservableProperty]
     public partial string Name { get; set; }
+
+    [ObservableProperty]
+    public partial ObservableCollection<MainModelCategoryItem> Items { get; set; } = [];
+}
+
+public sealed partial class MainModelCategoryItem : ObservableObject
+{
+    [ObservableProperty]
+    public partial string Name { get; set; }
+
+    [ObservableProperty]
+    public partial bool IsBoolean { get; set; }
+
+    [ObservableProperty]
+    public partial ObservableCollection<string> EnumValues { get; set; } = [];
+}
+
+public sealed partial class MainModelFolder : ObservableObject
+{
+    [ObservableProperty]
+    public partial int Id { get; set; }
+
+    [ObservableProperty]
+    public partial string Path { get; set; }
 }

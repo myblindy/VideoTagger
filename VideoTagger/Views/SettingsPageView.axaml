@@ -9,34 +9,170 @@
   x:Class="VideoTagger.Views.SettingsPageView"
 	x:DataType="vm:SettingsPageViewModel">
 
-	<Grid Margin="10">
-		<HeaderedContentControl Header="Categories">
-			<Grid RowDefinitions="*,auto">
-				<ListBox ItemsSource="{Binding MainModel.Categories}"
-								 SelectedItem="{Binding SelectedCategory}"
-								 IsVisible="{Binding MainModel.Categories.Count}">
-					<ListBox.ItemTemplate>
-						<DataTemplate>
-							<TextBlock Text="{Binding Name}"/>
-						</DataTemplate>
-					</ListBox.ItemTemplate>
-				</ListBox>
-				<TextBlock IsVisible="{Binding !MainModel.Categories.Count}"
-									 HorizontalAlignment="Center" VerticalAlignment="Center"
-									 Foreground="{DynamicResource SystemFillColorSolidNeutralBrush}">
-					(no cateories)
-				</TextBlock>
+	<TabControl Margin="0,0,0,5">
+		<TabItem Header="Videos">
+			<Grid>
+				<HeaderedContentControl Header="Folders">
+					<Grid RowDefinitions="*,auto">
+						<ListBox ItemsSource="{Binding MainModel.Folders}"
+										 SelectedItem="{Binding SelectedFolder}"
+										 IsVisible="{Binding MainModel.Folders.Count, FallbackValue=False}">
+							<ListBox.ItemTemplate>
+								<DataTemplate>
+									<TextBlock Text="{Binding Path}"/>
+								</DataTemplate>
+							</ListBox.ItemTemplate>
+						</ListBox>
+						<TextBlock IsVisible="{Binding !MainModel.Folders.Count, FallbackValue=True}"
+											 HorizontalAlignment="Center" VerticalAlignment="Center"
+											 Foreground="{DynamicResource SystemFillColorSolidNeutralBrush}">
+							(no folders)
+						</TextBlock>
 
-				<StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10">
-					<Button Command="{Binding AddNewCategoryCommand}">
-						<fctls:SymbolIcon Symbol="Add"/>
-					</Button>
-					<Button Command="{Binding RemoveSelectedCateogoryCommand}">
-						<fctls:SymbolIcon Symbol="Remove"/>
-					</Button>
-				</StackPanel>
+						<StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10">
+							<Button Command="{Binding AddNewFolderCommand}">
+								<fctls:SymbolIcon Symbol="Add"/>
+							</Button>
+							<Button Command="{Binding RemoveSelectedFolderCommand}">
+								<fctls:SymbolIcon Symbol="Remove"/>
+							</Button>
+						</StackPanel>
+					</Grid>
+				</HeaderedContentControl>
 			</Grid>
-		</HeaderedContentControl>
-	</Grid>
+		</TabItem>
+		<TabItem Header="Tags">
+			<Grid ColumnDefinitions="auto,auto,*">
+				<HeaderedContentControl Header="Categories" Margin="0,0,10,0">
+					<Grid RowDefinitions="*,auto">
+						<ListBox ItemsSource="{Binding MainModel.Categories}"
+										 SelectedItem="{Binding SelectedCategory}"
+										 IsVisible="{Binding MainModel.Categories.Count}">
+							<ListBox.ItemTemplate>
+								<DataTemplate>
+									<TextBlock Text="{Binding Name}"/>
+								</DataTemplate>
+							</ListBox.ItemTemplate>
+						</ListBox>
+						<TextBlock IsVisible="{Binding !MainModel.Categories.Count}"
+											 HorizontalAlignment="Center" VerticalAlignment="Center"
+											 Foreground="{DynamicResource SystemFillColorSolidNeutralBrush}">
+							(no cateories)
+						</TextBlock>
+
+						<StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10">
+							<Button Command="{Binding AddNewCategoryCommand}">
+								<fctls:SymbolIcon Symbol="Add"/>
+							</Button>
+							<Button Command="{Binding RemoveSelectedCateogoryCommand}">
+								<fctls:SymbolIcon Symbol="Remove"/>
+							</Button>
+							<Button Command="{Binding MoveSelectedCategoryDownCommand}">
+								<fctls:SymbolIcon Symbol="Download"/>
+							</Button>
+							<Button Command="{Binding MoveSelectedCategoryUpCommand}">
+								<fctls:SymbolIcon Symbol="Upload"/>
+							</Button>
+						</StackPanel>
+					</Grid>
+				</HeaderedContentControl>
+
+				<HeaderedContentControl Grid.Column="1" Header="Items" Margin="0,0,10,0">
+					<Grid RowDefinitions="*,auto">
+						<ListBox ItemsSource="{Binding SelectedCategory.Items}"
+										 SelectedItem="{Binding SelectedCategoryItem}"
+										 IsVisible="{Binding SelectedCategory.Items.Count}">
+							<ListBox.ItemTemplate>
+								<DataTemplate>
+									<StackPanel Orientation="Vertical">
+										<TextBlock Text="{Binding Name}"/>
+										<ItemsControl ItemsSource="{Binding EnumValues}"
+																	IsVisible="{Binding !IsBoolean}">
+											<ItemsControl.ItemsPanel>
+												<ItemsPanelTemplate>
+													<StackPanel Orientation="Horizontal" Spacing="5"/>
+												</ItemsPanelTemplate>
+											</ItemsControl.ItemsPanel>
+											<ItemsControl.ItemTemplate>
+												<DataTemplate>
+													<TextBlock Text="{Binding}" FontSize="10"
+																		 Foreground="{DynamicResource SystemFillColorSolidNeutralBrush}"/>
+												</DataTemplate>
+											</ItemsControl.ItemTemplate>
+										</ItemsControl>
+									</StackPanel>
+								</DataTemplate>
+							</ListBox.ItemTemplate>
+						</ListBox>
+						<TextBlock IsVisible="{Binding !SelectedCategory.Items.Count}"
+											 HorizontalAlignment="Center" VerticalAlignment="Center"
+											 Foreground="{DynamicResource SystemFillColorSolidNeutralBrush}">
+							(no items)
+						</TextBlock>
+
+						<StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10">
+							<Button Command="{Binding AddNewCategoryItemCommand}">
+								<fctls:SymbolIcon Symbol="Add"/>
+							</Button>
+							<Button Command="{Binding RemoveSelectedCategoryItemCommand}">
+								<fctls:SymbolIcon Symbol="Remove"/>
+							</Button>
+							<Button Command="{Binding MoveSelectedCategoryItemDownCommand}">
+								<fctls:SymbolIcon Symbol="Download"/>
+							</Button>
+							<Button Command="{Binding MoveSelectedCategoryItemUpCommand}">
+								<fctls:SymbolIcon Symbol="Upload"/>
+							</Button>
+						</StackPanel>
+					</Grid>
+				</HeaderedContentControl>
+
+				<HeaderedContentControl Grid.Column="2" Header="Item Values">
+					<Panel>
+						<Grid RowDefinitions="auto,auto,*,auto"
+									IsVisible="{Binding SelectedCategoryItem, Converter={x:Static ObjectConverters.IsNotNull}}">
+							<CheckBox IsChecked="{Binding SelectedCategoryItem.IsBoolean}" Margin="0,0,0,10">Boolean</CheckBox>
+
+							<TextBlock Grid.Row="1" Text="Enum Values:"
+												 IsEnabled="{Binding !SelectedCategoryItem.IsBoolean}"/>
+
+							<ListBox Grid.Row="2" ItemsSource="{Binding SelectedCategoryItem.EnumValues}"
+											 SelectedItem="{Binding SelectedCategoryItemEnumValue}"
+											 IsEnabled="{Binding !SelectedCategoryItem.IsBoolean}">
+								<ListBox.ItemTemplate>
+									<DataTemplate>
+										<TextBlock Text="{Binding}"/>
+									</DataTemplate>
+								</ListBox.ItemTemplate>
+							</ListBox>
+
+							<StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="10"
+													IsEnabled="{Binding !SelectedCategoryItem.IsBoolean}">
+								<Button Command="{Binding AddNewCategoryItemEnumValueCommand}">
+									<fctls:SymbolIcon Symbol="Add"/>
+								</Button>
+								<Button Command="{Binding RemoveSelectedCateogoryEnumValueCommand}">
+									<fctls:SymbolIcon Symbol="Remove"/>
+								</Button>
+								<Button Command="{Binding MoveSelectedCategoryDownEnumValueCommand}">
+									<fctls:SymbolIcon Symbol="Download"/>
+								</Button>
+								<Button Command="{Binding MoveSelectedCategoryUpEnumValueCommand}">
+									<fctls:SymbolIcon Symbol="Upload"/>
+								</Button>
+							</StackPanel>
+						</Grid>
+
+						<TextBlock IsVisible="{Binding SelectedCategoryItem, Converter={x:Static ObjectConverters.IsNull}}"
+								 HorizontalAlignment="Center" VerticalAlignment="Center"
+								 Foreground="{DynamicResource SystemFillColorSolidNeutralBrush}">
+							(no item selected)
+						</TextBlock>
+					</Panel>
+				</HeaderedContentControl>
+			</Grid>
+		</TabItem>
+	</TabControl>
+
 
 </UserControl>
