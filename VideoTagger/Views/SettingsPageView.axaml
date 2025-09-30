@@ -41,6 +41,38 @@
 				</HeaderedContentControl>
 			</Grid>
 		</TabItem>
+		<TabItem Header="Groups">
+			<Grid>
+				<HeaderedContentControl Header="Groups">
+					<Grid RowDefinitions="*,auto">
+						<ListBox ItemsSource="{Binding MainModel.Folders}"
+										 SelectedItem="{Binding SelectedFolder}"
+										 IsVisible="{Binding MainModel.Folders.Count, FallbackValue=False}">
+							<ListBox.ItemTemplate>
+								<DataTemplate>
+									<TextBlock Text="{Binding Path}"/>
+								</DataTemplate>
+							</ListBox.ItemTemplate>
+						</ListBox>
+						<TextBlock IsVisible="{Binding !MainModel.Folders.Count, FallbackValue=True}"
+											 HorizontalAlignment="Center" VerticalAlignment="Center"
+											 Foreground="{DynamicResource SystemFillColorSolidNeutralBrush}">
+							(no folders)
+						</TextBlock>
+
+						<StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10">
+							<Button Command="{Binding AddNewFolderCommand}">
+								<fctls:SymbolIcon Symbol="Add"/>
+							</Button>
+							<Button Command="{Binding RemoveSelectedFolderCommand}">
+								<fctls:SymbolIcon Symbol="Remove"/>
+							</Button>
+						</StackPanel>
+					</Grid>
+				</HeaderedContentControl>
+
+			</Grid>
+		</TabItem>
 		<TabItem Header="Tags">
 			<Grid ColumnDefinitions="auto,auto,*">
 				<HeaderedContentControl Header="Categories" Margin="0,0,10,0">
@@ -95,7 +127,7 @@
 											</ItemsControl.ItemsPanel>
 											<ItemsControl.ItemTemplate>
 												<DataTemplate>
-													<TextBlock Text="{Binding}" FontSize="10"
+													<TextBlock Text="{Binding EnumValue}" FontSize="10"
 																		 Foreground="{DynamicResource SystemFillColorSolidNeutralBrush}"/>
 												</DataTemplate>
 											</ItemsControl.ItemTemplate>
@@ -129,24 +161,29 @@
 
 				<HeaderedContentControl Grid.Column="2" Header="Item Values">
 					<Panel>
-						<Grid RowDefinitions="auto,auto,*,auto"
+						<Grid RowDefinitions="auto,auto,auto,auto,*,auto"
 									IsVisible="{Binding SelectedCategoryItem, Converter={x:Static ObjectConverters.IsNotNull}}">
 							<CheckBox IsChecked="{Binding SelectedCategoryItem.IsBoolean}" Margin="0,0,0,10">Boolean</CheckBox>
 
-							<TextBlock Grid.Row="1" Text="Enum Values:"
-												 IsEnabled="{Binding !SelectedCategoryItem.IsBoolean}"/>
+							<TextBlock Grid.Row="1" Text="Regex:"
+												 IsEnabled="{Binding SelectedCategoryItem.IsBoolean}"/>
+							<TextBox Grid.Row="2" AcceptsReturn="False" AcceptsTab="False" Margin="0,0,0,10"
+											 IsEnabled="{Binding SelectedCategoryItem.IsBoolean}"
+											 Text="{Binding SelectedCategoryItem.BooleanRegex}"/>
 
-							<ListBox Grid.Row="2" ItemsSource="{Binding SelectedCategoryItem.EnumValues}"
+							<TextBlock Grid.Row="3" Text="Enum Values:"
+												 IsEnabled="{Binding !SelectedCategoryItem.IsBoolean}"/>
+							<ListBox Grid.Row="4" ItemsSource="{Binding SelectedCategoryItem.EnumValues}"
 											 SelectedItem="{Binding SelectedCategoryItemEnumValue}"
 											 IsEnabled="{Binding !SelectedCategoryItem.IsBoolean}">
 								<ListBox.ItemTemplate>
 									<DataTemplate>
-										<TextBlock Text="{Binding}"/>
+										<TextBlock Text="{Binding EnumValue}"/>
 									</DataTemplate>
 								</ListBox.ItemTemplate>
 							</ListBox>
 
-							<StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="10"
+							<StackPanel Grid.Row="5" Orientation="Horizontal" Spacing="10"
 													IsEnabled="{Binding !SelectedCategoryItem.IsBoolean}">
 								<Button Command="{Binding AddNewCategoryItemEnumValueCommand}">
 									<fctls:SymbolIcon Symbol="Add"/>

@@ -193,7 +193,7 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
     #region Category Item Enum Values
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RemoveSelectedCateogoryEnumValueCommand), nameof(MoveSelectedCategoryDownEnumValueCommand), nameof(MoveSelectedCategoryUpEnumValueCommand))]
-    public partial string? SelectedCategoryItemEnumValue { get; set; }
+    public partial MainModelCategoryItemEnumValue? SelectedCategoryItemEnumValue { get; set; }
 
     [RelayCommand(CanExecute = nameof(CanAddNewCategoryItemEnumValue))]
     async Task AddNewCategoryItemEnumValue()
@@ -203,10 +203,10 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
         if (await dialogService.InputValue<string>("New Enum Value") is { } newEnumValue)
         {
             var anyChanged = false;
-            if (!SelectedCategoryItem.EnumValues.Any(ev => ev.Equals(newEnumValue, StringComparison.CurrentCultureIgnoreCase)))
+            if (!SelectedCategoryItem.EnumValues.Any(ev => ev.EnumValue.Equals(newEnumValue, StringComparison.CurrentCultureIgnoreCase)))
             {
-                SelectedCategoryItem.EnumValues.Add(newEnumValue);
-                SelectedCategoryItemEnumValue = newEnumValue;
+                SelectedCategoryItem.EnumValues.Add(new() { EnumValue = newEnumValue });
+                SelectedCategoryItemEnumValue = SelectedCategoryItem.EnumValues[^1];
                 anyChanged = true;
             }
             if (anyChanged)

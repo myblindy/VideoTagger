@@ -30,7 +30,19 @@ public sealed partial class MainModelCategoryItem : ObservableObject
     public partial bool IsBoolean { get; set; }
 
     [ObservableProperty]
-    public partial ObservableCollection<string> EnumValues { get; set; } = [];
+    public partial string? BooleanRegex { get; set; }
+
+    [ObservableProperty]
+    public partial ObservableCollection<MainModelCategoryItemEnumValue> EnumValues { get; set; } = [];
+}
+
+public sealed partial class MainModelCategoryItemEnumValue : ObservableObject
+{
+    [ObservableProperty]
+    public partial string EnumValue { get; set; }
+
+    [ObservableProperty]
+    public partial string? Regex { get; set; }
 }
 
 public sealed partial class MainModelFolder : ObservableObject
