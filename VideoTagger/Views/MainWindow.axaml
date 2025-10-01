@@ -21,12 +21,25 @@
 				<fctls:CommandBarToggleButton IconSource="Settings" Label="Settings"
 																			IsChecked="{Binding ShowSettingsPage, Mode=OneWay}"
 																			Command="{Binding SelectSettingsPageCommand}"/>
+				<fctls:CommandBarSeparator/>
+				<fctls:CommandBarButton IconSource="Refresh" Label="Update DB"
+																Command="{Binding UpdateDatabaseCommand}"/>
 			</fctls:CommandBar.PrimaryCommands>
 		</fctls:CommandBar>
 
-		<views:SettingsPageView x:Name="SettingsPageView" Grid.Row="1"
-														IsVisible="{Binding #RootWindow.DataContext.ShowSettingsPage}"
-														Background="Transparent"/>
+		<Panel Grid.Row="1" IsVisible="{Binding !Updating}">
+			<views:SettingsPageView x:Name="SettingsPageView"
+															IsVisible="{Binding #RootWindow.DataContext.ShowSettingsPage}"
+															Background="Transparent"/>
+		</Panel>
+
+		<Panel Grid.Row="1" IsVisible="{Binding Updating}"
+					 HorizontalAlignment="Center" VerticalAlignment="Center">
+			<StackPanel Orientation="Vertical" Spacing="10">
+				<fctls:ProgressRing IsActive="{Binding Updating}"/>
+				<TextBlock Text="Updating the database, please wait..." HorizontalAlignment="Center"/>
+			</StackPanel>
+		</Panel>
 	</Grid>
 
 </fwnd:AppWindow>

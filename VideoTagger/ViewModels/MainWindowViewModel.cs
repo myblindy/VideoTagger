@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using System.Threading.Tasks;
 using VideoTagger.Models;
 using VideoTagger.Services;
 
@@ -7,8 +8,17 @@ namespace VideoTagger.ViewModels;
 
 public partial class MainWindowViewModel : ViewModelBase
 {
-    public MainWindowViewModel(MainModel mainModel, DbService dbService)
+    private readonly VideoProcessingService videoProcessingService;
+
+    public DbService DbService { get; }
+
+    [ObservableProperty]
+    public partial bool Updating { get; set; }
+
+    public MainWindowViewModel(MainModel mainModel, DbService dbService, VideoProcessingService videoProcessingService)
     {
+        this.videoProcessingService = videoProcessingService;
+        DbService = dbService;
         dbService.FillMainModel(mainModel);
     }
 
@@ -19,5 +29,18 @@ public partial class MainWindowViewModel : ViewModelBase
     void SelectSettingsPage()
     {
         ShowSettingsPage = true;
+    }
+
+    [RelayCommand]
+    async Task UpdateDatabase()
+    {
+        try
+        {
+            Updating = true;
+
+            await videoProcessingService.UpdateVideosAsync();
+            DbService.IsDirty = false;
+        }
+        finally { Updating = false; }
     }
 }

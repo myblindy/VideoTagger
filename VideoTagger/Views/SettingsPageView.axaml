@@ -5,159 +5,128 @@
   xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 	xmlns:vm="using:VideoTagger.ViewModels"
 	xmlns:fctls="using:FluentAvalonia.UI.Controls"
+	xmlns:ctls="using:VideoTagger.Controls"
+	xmlns:models="using:VideoTagger.Models"
   mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
   x:Class="VideoTagger.Views.SettingsPageView"
 	x:DataType="vm:SettingsPageViewModel">
 
 	<TabControl Margin="0,0,0,5">
 		<TabItem Header="Videos">
-			<Grid>
-				<HeaderedContentControl Header="Folders">
-					<Grid RowDefinitions="*,auto">
-						<ListBox ItemsSource="{Binding MainModel.Folders}"
-										 SelectedItem="{Binding SelectedFolder}"
-										 IsVisible="{Binding MainModel.Folders.Count, FallbackValue=False}">
-							<ListBox.ItemTemplate>
-								<DataTemplate>
-									<TextBlock Text="{Binding Path}"/>
-								</DataTemplate>
-							</ListBox.ItemTemplate>
-						</ListBox>
-						<TextBlock IsVisible="{Binding !MainModel.Folders.Count, FallbackValue=True}"
-											 HorizontalAlignment="Center" VerticalAlignment="Center"
-											 Foreground="{DynamicResource SystemFillColorSolidNeutralBrush}">
-							(no folders)
-						</TextBlock>
+			<Grid ColumnDefinitions="auto,*">
+				<ctls:EditableListBox
+					Header="Folders"
+					ItemsSource="{Binding MainModel.Folders}"
+					SelectedItem="{Binding SelectedFolder}"
+					HasNoItems="{Binding !MainModel.Folders.Count, FallbackValue=True}"
+					NoItemsText="(no folders)"
+					AddCommand="{Binding AddNewFolderCommand}"
+					RemoveCommand="{Binding RemoveSelectedFolderCommand}"
+					IsMoveDownVisible="False" IsMoveUpVisible="False">
 
-						<StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10">
-							<Button Command="{Binding AddNewFolderCommand}">
-								<fctls:SymbolIcon Symbol="Add"/>
-							</Button>
-							<Button Command="{Binding RemoveSelectedFolderCommand}">
-								<fctls:SymbolIcon Symbol="Remove"/>
-							</Button>
-						</StackPanel>
-					</Grid>
-				</HeaderedContentControl>
+					<ctls:EditableListBox.ItemTemplate>
+						<DataTemplate x:DataType="models:MainModelFolder">
+							<TextBlock Text="{Binding Path}"/>
+						</DataTemplate>
+					</ctls:EditableListBox.ItemTemplate>
+
+				</ctls:EditableListBox>
 			</Grid>
 		</TabItem>
 		<TabItem Header="Groups">
-			<Grid>
-				<HeaderedContentControl Header="Groups">
-					<Grid RowDefinitions="*,auto">
-						<ListBox ItemsSource="{Binding MainModel.Folders}"
-										 SelectedItem="{Binding SelectedFolder}"
-										 IsVisible="{Binding MainModel.Folders.Count, FallbackValue=False}">
-							<ListBox.ItemTemplate>
-								<DataTemplate>
-									<TextBlock Text="{Binding Path}"/>
-								</DataTemplate>
-							</ListBox.ItemTemplate>
-						</ListBox>
-						<TextBlock IsVisible="{Binding !MainModel.Folders.Count, FallbackValue=True}"
-											 HorizontalAlignment="Center" VerticalAlignment="Center"
-											 Foreground="{DynamicResource SystemFillColorSolidNeutralBrush}">
-							(no folders)
-						</TextBlock>
+			<Grid ColumnDefinitions="auto,auto,*">
+				<ctls:EditableListBox
+					Header="Groups"
+					ItemsSource="{Binding MainModel.Groups}"
+					SelectedItem="{Binding SelectedGroup}"
+					HasNoItems="{Binding !MainModel.Groups.Count, FallbackValue=True}"
+					NoItemsText="(no groups)"
+					AddCommand="{Binding AddNewGroupCommand}"
+					RemoveCommand="{Binding RemoveSelectedGroupCommand}"
+					IsMoveDownVisible="False" IsMoveUpVisible="False">
 
-						<StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10">
-							<Button Command="{Binding AddNewFolderCommand}">
-								<fctls:SymbolIcon Symbol="Add"/>
-							</Button>
-							<Button Command="{Binding RemoveSelectedFolderCommand}">
-								<fctls:SymbolIcon Symbol="Remove"/>
-							</Button>
-						</StackPanel>
-					</Grid>
-				</HeaderedContentControl>
+					<ctls:EditableListBox.ItemTemplate>
+						<DataTemplate x:DataType="models:MainModelGroup">
+							<TextBlock Text="{Binding Name}"/>
+						</DataTemplate>
+					</ctls:EditableListBox.ItemTemplate>
 
+				</ctls:EditableListBox>
+				
+				<ctls:EditableListBox
+					Grid.Column="1" Header="Group Members"
+					ItemsSource="{Binding SelectedGroup.Members}"
+					SelectedItem="{Binding SelectedGroupMember}"
+					HasNoItems="{Binding !SelectedGroup.Members.Count, FallbackValue=True}"
+					NoItemsText="(no members)"
+					AddCommand="{Binding AddNewGroupMemberCommand}"
+					RemoveCommand="{Binding RemoveSelectedGroupMemberCommand}"
+					IsMoveDownVisible="False" IsMoveUpVisible="False">
+
+					<ctls:EditableListBox.ItemTemplate>
+						<DataTemplate x:DataType="models:MainModelGroupMember">
+							<TextBlock Text="{Binding Name}"/>
+						</DataTemplate>
+					</ctls:EditableListBox.ItemTemplate>
+
+				</ctls:EditableListBox>
 			</Grid>
 		</TabItem>
 		<TabItem Header="Tags">
 			<Grid ColumnDefinitions="auto,auto,*">
-				<HeaderedContentControl Header="Categories" Margin="0,0,10,0">
-					<Grid RowDefinitions="*,auto">
-						<ListBox ItemsSource="{Binding MainModel.Categories}"
-										 SelectedItem="{Binding SelectedCategory}"
-										 IsVisible="{Binding MainModel.Categories.Count}">
-							<ListBox.ItemTemplate>
-								<DataTemplate>
-									<TextBlock Text="{Binding Name}"/>
-								</DataTemplate>
-							</ListBox.ItemTemplate>
-						</ListBox>
-						<TextBlock IsVisible="{Binding !MainModel.Categories.Count}"
-											 HorizontalAlignment="Center" VerticalAlignment="Center"
-											 Foreground="{DynamicResource SystemFillColorSolidNeutralBrush}">
-							(no cateories)
-						</TextBlock>
+				<ctls:EditableListBox
+					Header="Categories"
+					ItemsSource="{Binding MainModel.Categories}"
+					SelectedItem="{Binding SelectedCategory}"
+					HasNoItems="{Binding !MainModel.Categories.Count, FallbackValue=True}"
+					NoItemsText="(no cateories)"
+					AddCommand="{Binding AddNewCategoryCommand}"
+					RemoveCommand="{Binding RemoveSelectedCateogoryCommand}"
+					MoveDownCommand="{Binding MoveSelectedCategoryDownCommand}"
+					MoveUpCommand="{Binding MoveSelectedCategoryUpCommand}">
 
-						<StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10">
-							<Button Command="{Binding AddNewCategoryCommand}">
-								<fctls:SymbolIcon Symbol="Add"/>
-							</Button>
-							<Button Command="{Binding RemoveSelectedCateogoryCommand}">
-								<fctls:SymbolIcon Symbol="Remove"/>
-							</Button>
-							<Button Command="{Binding MoveSelectedCategoryDownCommand}">
-								<fctls:SymbolIcon Symbol="Download"/>
-							</Button>
-							<Button Command="{Binding MoveSelectedCategoryUpCommand}">
-								<fctls:SymbolIcon Symbol="Upload"/>
-							</Button>
-						</StackPanel>
-					</Grid>
-				</HeaderedContentControl>
+					<ctls:EditableListBox.ItemTemplate>
+						<DataTemplate x:DataType="models:MainModelCategory">
+							<TextBlock Text="{Binding Name}"/>
+						</DataTemplate>
+					</ctls:EditableListBox.ItemTemplate>
 
-				<HeaderedContentControl Grid.Column="1" Header="Items" Margin="0,0,10,0">
-					<Grid RowDefinitions="*,auto">
-						<ListBox ItemsSource="{Binding SelectedCategory.Items}"
-										 SelectedItem="{Binding SelectedCategoryItem}"
-										 IsVisible="{Binding SelectedCategory.Items.Count}">
-							<ListBox.ItemTemplate>
-								<DataTemplate>
-									<StackPanel Orientation="Vertical">
-										<TextBlock Text="{Binding Name}"/>
-										<ItemsControl ItemsSource="{Binding EnumValues}"
-																	IsVisible="{Binding !IsBoolean}">
-											<ItemsControl.ItemsPanel>
-												<ItemsPanelTemplate>
-													<StackPanel Orientation="Horizontal" Spacing="5"/>
-												</ItemsPanelTemplate>
-											</ItemsControl.ItemsPanel>
-											<ItemsControl.ItemTemplate>
-												<DataTemplate>
-													<TextBlock Text="{Binding EnumValue}" FontSize="10"
-																		 Foreground="{DynamicResource SystemFillColorSolidNeutralBrush}"/>
-												</DataTemplate>
-											</ItemsControl.ItemTemplate>
-										</ItemsControl>
-									</StackPanel>
-								</DataTemplate>
-							</ListBox.ItemTemplate>
-						</ListBox>
-						<TextBlock IsVisible="{Binding !SelectedCategory.Items.Count}"
-											 HorizontalAlignment="Center" VerticalAlignment="Center"
-											 Foreground="{DynamicResource SystemFillColorSolidNeutralBrush}">
-							(no items)
-						</TextBlock>
+				</ctls:EditableListBox>
 
-						<StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10">
-							<Button Command="{Binding AddNewCategoryItemCommand}">
-								<fctls:SymbolIcon Symbol="Add"/>
-							</Button>
-							<Button Command="{Binding RemoveSelectedCategoryItemCommand}">
-								<fctls:SymbolIcon Symbol="Remove"/>
-							</Button>
-							<Button Command="{Binding MoveSelectedCategoryItemDownCommand}">
-								<fctls:SymbolIcon Symbol="Download"/>
-							</Button>
-							<Button Command="{Binding MoveSelectedCategoryItemUpCommand}">
-								<fctls:SymbolIcon Symbol="Upload"/>
-							</Button>
-						</StackPanel>
-					</Grid>
-				</HeaderedContentControl>
+				<ctls:EditableListBox
+					Grid.Column="1" Header="Items" Margin="0,0,10,0"
+					ItemsSource="{Binding SelectedCategory.Items}"
+					SelectedItem="{Binding SelectedCategoryItem}"
+					HasNoItems="{Binding !SelectedCategory.Items.Count, FallbackValue=True}"
+					NoItemsText="(no items)"
+					AddCommand="{Binding AddNewCategoryItemCommand}"
+					RemoveCommand="{Binding RemoveSelectedCategoryItemCommand}"
+					MoveDownCommand="{Binding MoveSelectedCategoryItemDownCommand}"
+					MoveUpCommand="{Binding MoveSelectedCategoryItemUpCommand}">
+
+					<ctls:EditableListBox.ItemTemplate>
+						<DataTemplate x:DataType="models:MainModelCategoryItem">
+							<StackPanel Orientation="Vertical">
+								<TextBlock Text="{Binding Name}"/>
+								<ItemsControl ItemsSource="{Binding EnumValues}"
+															IsVisible="{Binding !IsBoolean}">
+									<ItemsControl.ItemsPanel>
+										<ItemsPanelTemplate>
+											<StackPanel Orientation="Horizontal" Spacing="5"/>
+										</ItemsPanelTemplate>
+									</ItemsControl.ItemsPanel>
+									<ItemsControl.ItemTemplate>
+										<DataTemplate>
+											<TextBlock Text="{Binding EnumValue}" FontSize="10"
+																 Foreground="{DynamicResource SystemFillColorSolidNeutralBrush}"/>
+										</DataTemplate>
+									</ItemsControl.ItemTemplate>
+								</ItemsControl>
+							</StackPanel>
+						</DataTemplate>
+					</ctls:EditableListBox.ItemTemplate>
+
+				</ctls:EditableListBox>
 
 				<HeaderedContentControl Grid.Column="2" Header="Item Values">
 					<Panel>
@@ -171,33 +140,24 @@
 											 IsEnabled="{Binding SelectedCategoryItem.IsBoolean}"
 											 Text="{Binding SelectedCategoryItem.BooleanRegex}"/>
 
-							<TextBlock Grid.Row="3" Text="Enum Values:"
-												 IsEnabled="{Binding !SelectedCategoryItem.IsBoolean}"/>
-							<ListBox Grid.Row="4" ItemsSource="{Binding SelectedCategoryItem.EnumValues}"
-											 SelectedItem="{Binding SelectedCategoryItemEnumValue}"
-											 IsEnabled="{Binding !SelectedCategoryItem.IsBoolean}">
-								<ListBox.ItemTemplate>
-									<DataTemplate>
+							<ctls:EditableListBox
+								Grid.Row="4" Header="Enum Values"
+								ItemsSource="{Binding SelectedCategoryItem.EnumValues}"
+								SelectedItem="{Binding SelectedCategoryItemEnumValue}"
+								IsEnabled="{Binding !SelectedCategoryItem.IsBoolean}"
+								NoItemsText="No Enum Values"
+								HasNoItems="{Binding !SelectedCategoryItem.EnumValues.Count, FallbackValue=True}"
+								AddCommand="{Binding AddNewCategoryItemEnumValueCommand}"
+								RemoveCommand="{Binding RemoveSelectedCateogoryEnumValueCommand}"
+								MoveDownCommand="{Binding MoveSelectedCategoryDownEnumValueCommand}"
+								MoveUpCommand="{Binding MoveSelectedCategoryUpEnumValueCommand}">
+
+								<ctls:EditableListBox.ItemTemplate>
+									<DataTemplate x:DataType="models:MainModelCategoryItemEnumValue">
 										<TextBlock Text="{Binding EnumValue}"/>
 									</DataTemplate>
-								</ListBox.ItemTemplate>
-							</ListBox>
-
-							<StackPanel Grid.Row="5" Orientation="Horizontal" Spacing="10"
-													IsEnabled="{Binding !SelectedCategoryItem.IsBoolean}">
-								<Button Command="{Binding AddNewCategoryItemEnumValueCommand}">
-									<fctls:SymbolIcon Symbol="Add"/>
-								</Button>
-								<Button Command="{Binding RemoveSelectedCateogoryEnumValueCommand}">
-									<fctls:SymbolIcon Symbol="Remove"/>
-								</Button>
-								<Button Command="{Binding MoveSelectedCategoryDownEnumValueCommand}">
-									<fctls:SymbolIcon Symbol="Download"/>
-								</Button>
-								<Button Command="{Binding MoveSelectedCategoryUpEnumValueCommand}">
-									<fctls:SymbolIcon Symbol="Upload"/>
-								</Button>
-							</StackPanel>
+								</ctls:EditableListBox.ItemTemplate>
+							</ctls:EditableListBox>
 						</Grid>
 
 						<TextBlock IsVisible="{Binding SelectedCategoryItem, Converter={x:Static ObjectConverters.IsNull}}"

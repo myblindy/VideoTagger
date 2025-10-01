@@ -1,4 +1,5 @@
-﻿using LiteDB;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using LiteDB;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
@@ -11,11 +12,19 @@ using VideoTagger.Models;
 
 namespace VideoTagger.Services;
 
-public sealed class DbService : IHostedService
+public sealed class DbService : ObservableObject, IHostedService
 {
     readonly ILiteDatabase db;
     readonly ILiteCollection<MainModelCategory> categoriesCollection;
     readonly ILiteCollection<MainModelFolder> foldersCollection;
+    readonly ILiteCollection<MainModelGroup> groupsCollection;
+
+    class MiscInternal
+    {
+        public int Id { get; set; }
+        public bool IsDirty { get; set; }
+    }
+    readonly ILiteCollection<MiscInternal> miscInternalCollection;
 
     public DbService()
     {
@@ -32,6 +41,14 @@ public sealed class DbService : IHostedService
         });
         categoriesCollection = db.GetCollection<MainModelCategory>();
         foldersCollection = db.GetCollection<MainModelFolder>();
+        groupsCollection = db.GetCollection<MainModelGroup>();
+        miscInternalCollection = db.GetCollection<MiscInternal>();
+
+        // misc properties
+        if (miscInternalCollection.FindAll().FirstOrDefault() is { } misc)
+        {
+            IsDirty = misc.IsDirty;
+        }
     }
 
     public void FillMainModel(MainModel mainModel)
@@ -41,6 +58,9 @@ public sealed class DbService : IHostedService
 
         mainModel.Folders.Clear();
         mainModel.Folders.AddRange(foldersCollection.FindAll());
+
+        mainModel.Groups.Clear();
+        mainModel.Groups.AddRange(groupsCollection.FindAll());
     }
 
     public void WriteMainModel(MainModel mainModel)
@@ -49,6 +69,23 @@ public sealed class DbService : IHostedService
         categoriesCollection.InsertBulk(mainModel.Categories);
         foldersCollection.DeleteAll();
         foldersCollection.InsertBulk(mainModel.Folders);
+        groupsCollection.DeleteAll();
+        groupsCollection.InsertBulk(mainModel.Groups);
+
+        IsDirty = true;
+    }
+
+    public bool IsDirty
+    {
+        get;
+        set
+        {
+            SetProperty(ref field, value);
+            if (miscInternalCollection.FindAll().FirstOrDefault() is not { } misc)
+                misc = new();
+            misc.IsDirty = value;
+            miscInternalCollection.Upsert(misc);
+        }
     }
 
     public Task StartAsync(CancellationToken cancellationToken) =>

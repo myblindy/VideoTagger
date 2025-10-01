@@ -302,4 +302,79 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
     bool CanRemoveSelectedFolder() =>
         SelectedFolder is not null;
     #endregion
+
+    #region Groups
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RemoveSelectedGroupCommand))]
+    public partial MainModelGroup? SelectedGroup { get; set; }
+
+    [RelayCommand]
+    async Task AddNewGroup()
+    {
+        if (await dialogService.InputValue<string>("New Group") is { } newGroup)
+        {
+            var anyChanged = false;
+            if (!MainModel.Groups.Any(g => g.Name.Equals(newGroup, StringComparison.CurrentCultureIgnoreCase)))
+            {
+                MainModel.Groups.Add(new() { Name = newGroup });
+                SelectedGroup = MainModel.Groups[^1];
+                anyChanged = true;
+            }
+            if (anyChanged)
+                dbService.WriteMainModel(MainModel);
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRemoveSelectedGroup))]
+    async Task RemoveSelectedGroup()
+    {
+        if (SelectedGroup is null) return;
+        if (await dialogService.Question("Remove Group", $"Are you sure you want to remove the group '{SelectedGroup.Name}'?"))
+        {
+            MainModel.Groups.Remove(SelectedGroup);
+            dbService.WriteMainModel(MainModel);
+            SelectedGroup = null;
+        }
+    }
+    bool CanRemoveSelectedGroup() =>
+        SelectedGroup is not null;
+    #endregion
+
+    #region Group Members
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RemoveSelectedGroupMemberCommand))]
+    public partial MainModelGroupMember? SelectedGroupMember { get; set; }
+
+    [RelayCommand]
+    async Task AddNewGroupMember()
+    {
+        if (SelectedGroup is null) return;
+        if (await dialogService.InputValue<string>("New Group Member") is { } newGroupMember)
+        {
+            var anyChanged = false;
+            if (!SelectedGroup.Members.Any(m => m.Name.Equals(newGroupMember, StringComparison.CurrentCultureIgnoreCase)))
+            {
+                SelectedGroup.Members.Add(new() { Name = newGroupMember });
+                SelectedGroupMember = SelectedGroup.Members[^1];
+                anyChanged = true;
+            }
+            if (anyChanged)
+                dbService.WriteMainModel(MainModel);
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRemoveSelectedGroupMember))]
+    async Task RemoveSelectedGroupMember()
+    {
+        if (SelectedGroup is null || SelectedGroupMember is null) return;
+        if (await dialogService.Question("Remove Group Member", $"Are you sure you want to remove the group member '{SelectedGroupMember.Name}' from the group '{SelectedGroup.Name}'?"))
+        {
+            SelectedGroup.Members.Remove(SelectedGroupMember);
+            dbService.WriteMainModel(MainModel);
+            SelectedGroupMember = null;
+        }
+    }
+    bool CanRemoveSelectedGroupMember() =>
+        SelectedGroupMember is not null;
+    #endregion
 }

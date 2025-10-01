@@ -17,6 +17,7 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Services
     .AddDbService()
     .AddDialogService()
+    .AddVideoProcessingService()
 
     .AddSingleton<MainModel>()
 
@@ -49,19 +50,24 @@ internal sealed partial class Program
     public static AppBuilder BuildAvaloniaApp() => BuildAvaloniaAppFromServiceProvider(EmptyServiceProvider);
 
     private static AppBuilder BuildAvaloniaAppFromServiceProvider(IServiceProvider serviceProvider)
-        => AppBuilder.Configure(() => new App(serviceProvider))
+    {
+        var appBuilder = AppBuilder.Configure(() => new App(serviceProvider))
             .UsePlatformDetect()
             .WithInterFont()
             .LogToTrace()
-            .UseManagedSystemDialogs<AppWindow>()
             .AfterSetup(builder =>
-            {
-                // The ApplicationLifetime is null when using the previewer.
-                if (builder.Instance?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
                 {
-                    AfterDesktopSetup(desktop, serviceProvider);
-                }
-            });
+                    // The ApplicationLifetime is null when using the previewer.
+                    if (builder.Instance?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+                    {
+                        AfterDesktopSetup(desktop, serviceProvider);
+                    }
+                });
+        if (OperatingSystem.IsWindows() || OperatingSystem.IsMacOS() || OperatingSystem.IsLinux())
+            appBuilder.UseManagedSystemDialogs<AppWindow>();
+
+        return appBuilder;
+    }
 
     private static void AfterDesktopSetup(IClassicDesktopStyleApplicationLifetime desktop, IServiceProvider serviceProvider)
     {
