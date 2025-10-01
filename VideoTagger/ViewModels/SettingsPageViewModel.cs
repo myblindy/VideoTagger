@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using ReactiveUI;
 using System;
 using System.Linq;
+using System.Reactive.Linq;
 using System.Threading.Tasks;
 using VideoTagger.Models;
 using VideoTagger.Services;
@@ -27,6 +28,11 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
             RemoveSelectedCateogoryEnumValueCommand.NotifyCanExecuteChanged();
             MoveSelectedCategoryDownEnumValueCommand.NotifyCanExecuteChanged();
             MoveSelectedCategoryUpEnumValueCommand.NotifyCanExecuteChanged();
+        });
+
+        this.WhenAnyValue(x => x.SelectedCategoryItem!.BooleanRegex).Throttle(TimeSpan.FromSeconds(1)).Subscribe(_ =>
+        {
+            dbService.WriteMainModel(MainModel);
         });
     }
 
