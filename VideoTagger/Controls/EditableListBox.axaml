@@ -8,32 +8,40 @@
 	x:Name="RootControl"
 	x:Class="VideoTagger.Controls.EditableListBox">
 
-	<HeaderedContentControl Header="{Binding #RootControl.Header}" Margin="0,0,10,0">
-		<Grid RowDefinitions="*,auto">
-			<ListBox ItemsSource="{Binding #RootControl.ItemsSource}"
-							 SelectedItem="{Binding #RootControl.SelectedItem}"
-							 ItemTemplate="{Binding #RootControl.ItemTemplate}"/>
-			<TextBlock IsVisible="{Binding #RootControl.HasNoItems}"
-								 HorizontalAlignment="Center" VerticalAlignment="Center"
-								 Foreground="{DynamicResource SystemFillColorSolidNeutralBrush}"
-								 Text="{Binding #RootControl.NoItemsText}"/>
+	<HeaderedContentControl Header="{Binding #RootControl.Header}">
+		<Grid x:Name="Grid">
+			<Grid RowDefinitions="*,auto">
+				<ListBox ItemsSource="{Binding #RootControl.ItemsSource}"
+								 SelectedItem="{Binding #RootControl.SelectedItem}"
+								 ItemTemplate="{Binding #RootControl.ItemTemplate}"/>
+				<TextBlock IsVisible="{Binding #RootControl.HasNoItems}"
+									 HorizontalAlignment="Center" VerticalAlignment="Center"
+									 Foreground="{DynamicResource SystemFillColorSolidNeutralBrush}"
+									 Text="{Binding #RootControl.NoItemsText}"/>
 
-			<StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10">
-				<Button Command="{Binding #RootControl.AddCommand}">
-					<fctls:SymbolIcon Symbol="Add"/>
-				</Button>
-				<Button Command="{Binding #RootControl.RemoveCommand}">
-					<fctls:SymbolIcon Symbol="Remove"/>
-				</Button>
-				<Button Command="{Binding #RootControl.MoveUpCommand}"
-								IsVisible="{Binding #RootControl.IsMoveUpVisible}">
-					<fctls:SymbolIcon Symbol="Download"/>
-				</Button>
-				<Button Command="{Binding #RootControl.MoveDownCommand}"
-								IsVisible="{Binding #RootControl.IsMoveDownVisible}">
-					<fctls:SymbolIcon Symbol="Upload"/>
-				</Button>
-			</StackPanel>
+				<StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10">
+					<Button Command="{Binding #RootControl.AddCommand}">
+						<fctls:SymbolIcon Symbol="Add"/>
+					</Button>
+					<Button Command="{Binding #RootControl.RemoveCommand}">
+						<fctls:SymbolIcon Symbol="Remove"/>
+					</Button>
+					<Button Command="{Binding #RootControl.MoveDownCommand}"
+									IsVisible="{Binding #RootControl.IsMoveDownVisible}">
+						<fctls:SymbolIcon Symbol="Download"/>
+					</Button>
+					<Button Command="{Binding #RootControl.MoveUpCommand}"
+									IsVisible="{Binding #RootControl.IsMoveUpVisible}">
+						<fctls:SymbolIcon Symbol="Upload"/>
+					</Button>
+				</StackPanel>
+			</Grid>
+			
+			<ContentPresenter Grid.Column="1" Margin="10,10,0,0"
+												IsVisible="{Binding #RootControl.EditPanelTemplate, Converter={x:Static ObjectConverters.IsNotNull}}"
+												Content="{Binding #RootControl.SelectedItem}"
+												ContentTemplate="{Binding #RootControl.EditPanelTemplate}"/>
 		</Grid>
 	</HeaderedContentControl>
+
 </UserControl>

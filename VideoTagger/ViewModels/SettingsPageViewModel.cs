@@ -30,7 +30,7 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
             MoveSelectedCategoryUpEnumValueCommand.NotifyCanExecuteChanged();
         });
 
-        this.WhenAnyValue(x => x.SelectedCategoryItem!.BooleanRegex).Throttle(TimeSpan.FromSeconds(1)).Subscribe(_ =>
+        this.WhenAnyValue(x => x.SelectedCategoryItem!.BooleanRegex, x => x.SelectedCategoryItemEnumValue!.Regex).Throttle(TimeSpan.FromSeconds(1)).Subscribe(_ =>
         {
             dbService.WriteMainModel(MainModel);
         });
@@ -344,6 +344,44 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
     }
     bool CanRemoveSelectedGroup() =>
         SelectedGroup is not null;
+
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RemoveGroupAlternativeNameCommand))]
+    public partial MainModelGroupAlternativeName? SelectedGroupAlternativeName { get; set; }
+
+    [RelayCommand]
+    async Task AddNewGroupAlternativeName()
+    {
+        if (SelectedGroup is null) return;
+
+        if (await dialogService.InputValue<string>("New Group Alternative Name") is { } newGroupAlternativeName)
+        {
+            var anyChanged = false;
+            if (!SelectedGroup.AlternativeNames.Any(an => an.Name.Equals(newGroupAlternativeName, StringComparison.CurrentCultureIgnoreCase)))
+            {
+                SelectedGroup.AlternativeNames.Add(new() { Name = newGroupAlternativeName });
+                SelectedGroupAlternativeName = SelectedGroup.AlternativeNames[^1];
+                anyChanged = true;
+            }
+            if (anyChanged)
+                dbService.WriteMainModel(MainModel);
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanRemoveGroupAlternativeName))]
+    async Task RemoveGroupAlternativeName()
+    {
+        if (SelectedGroup is null || SelectedGroupAlternativeName is null) return;
+
+        if (await dialogService.Question("Remove Group Alternative Name", $"Are you sure you want to remove the group alternative name '{SelectedGroupAlternativeName.Name}' for '{SelectedGroup.Name}'?"))
+        {
+            SelectedGroup.AlternativeNames.Remove(SelectedGroupAlternativeName);
+            dbService.WriteMainModel(MainModel);
+            SelectedGroupAlternativeName = null;
+        }
+    }
+    bool CanRemoveGroupAlternativeName() =>
+        SelectedGroupAlternativeName is not null;
     #endregion
 
     #region Group Members

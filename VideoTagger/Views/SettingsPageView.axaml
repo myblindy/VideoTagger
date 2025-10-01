@@ -9,7 +9,8 @@
 	xmlns:models="using:VideoTagger.Models"
   mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
   x:Class="VideoTagger.Views.SettingsPageView"
-	x:DataType="vm:SettingsPageViewModel">
+	x:DataType="vm:SettingsPageViewModel"
+	x:Name="RootView">
 
 	<TabControl Margin="0,0,0,5">
 		<TabItem Header="Videos">
@@ -36,7 +37,7 @@
 		<TabItem Header="Groups">
 			<Grid ColumnDefinitions="auto,auto,*">
 				<ctls:EditableListBox
-					Header="Groups"
+					Header="Groups" Margin="0,0,10,0"
 					ItemsSource="{Binding MainModel.Groups}"
 					SelectedItem="{Binding SelectedGroup}"
 					HasNoItems="{Binding !MainModel.Groups.Count, FallbackValue=True}"
@@ -47,14 +48,50 @@
 
 					<ctls:EditableListBox.ItemTemplate>
 						<DataTemplate x:DataType="models:MainModelGroup">
-							<TextBlock Text="{Binding Name}"/>
+							<StackPanel Orientation="Vertical">
+								<TextBlock Text="{Binding Name}"/>
+								<ItemsControl ItemsSource="{Binding AlternativeNames}"
+															IsVisible="{Binding AlternativeNames.Count}">
+									<ItemsControl.ItemsPanel>
+										<ItemsPanelTemplate>
+											<StackPanel Orientation="Horizontal" Spacing="5"/>
+										</ItemsPanelTemplate>
+									</ItemsControl.ItemsPanel>
+									<ItemsControl.ItemTemplate>
+										<DataTemplate>
+											<TextBlock Text="{Binding Name}" FontSize="10"
+																 Foreground="{DynamicResource SystemFillColorSolidNeutralBrush}"/>
+										</DataTemplate>
+									</ItemsControl.ItemTemplate>
+								</ItemsControl>
+							</StackPanel>
 						</DataTemplate>
 					</ctls:EditableListBox.ItemTemplate>
 
+					<ctls:EditableListBox.EditPanelTemplate>
+						<DataTemplate x:DataType="models:MainModelGroup">
+							<ctls:EditableListBox
+								Header="Alternatives"
+								ItemsSource="{Binding AlternativeNames}"
+								SelectedItem="{Binding #RootView.DataContext.SelectedGroupAlternativeName}"
+								HasNoItems="{Binding !AlternativeNames.Count, FallbackValue=True}"
+								NoItemsText="(no alternative names)"
+								AddCommand="{Binding #RootView.DataContext.AddNewGroupAlternativeNameCommand}"
+								RemoveCommand="{Binding #RootView.DataContext.RemoveGroupAlternativeNameCommand}"
+								IsMoveDownVisible="False" IsMoveUpVisible="False">
+
+								<ctls:EditableListBox.ItemTemplate>
+									<DataTemplate x:DataType="models:MainModelGroupAlternativeName">
+										<TextBlock Text="{Binding Name}"/>
+									</DataTemplate>
+								</ctls:EditableListBox.ItemTemplate>
+							</ctls:EditableListBox>
+						</DataTemplate>
+					</ctls:EditableListBox.EditPanelTemplate>
 				</ctls:EditableListBox>
-				
+
 				<ctls:EditableListBox
-					Grid.Column="1" Header="Group Members"
+					Grid.Column="1" Header="Members"
 					ItemsSource="{Binding SelectedGroup.Members}"
 					SelectedItem="{Binding SelectedGroupMember}"
 					HasNoItems="{Binding !SelectedGroup.Members.Count, FallbackValue=True}"
@@ -75,7 +112,7 @@
 		<TabItem Header="Tags">
 			<Grid ColumnDefinitions="auto,auto,*">
 				<ctls:EditableListBox
-					Header="Categories"
+					Header="Categories" Margin="0,0,10,0"
 					ItemsSource="{Binding MainModel.Categories}"
 					SelectedItem="{Binding SelectedCategory}"
 					HasNoItems="{Binding !MainModel.Categories.Count, FallbackValue=True}"
@@ -145,7 +182,7 @@
 								ItemsSource="{Binding SelectedCategoryItem.EnumValues}"
 								SelectedItem="{Binding SelectedCategoryItemEnumValue}"
 								IsEnabled="{Binding !SelectedCategoryItem.IsBoolean}"
-								NoItemsText="No Enum Values"
+								NoItemsText="(no enum values)"
 								HasNoItems="{Binding !SelectedCategoryItem.EnumValues.Count, FallbackValue=True}"
 								AddCommand="{Binding AddNewCategoryItemEnumValueCommand}"
 								RemoveCommand="{Binding RemoveSelectedCateogoryEnumValueCommand}"
@@ -157,6 +194,16 @@
 										<TextBlock Text="{Binding EnumValue}"/>
 									</DataTemplate>
 								</ctls:EditableListBox.ItemTemplate>
+
+								<ctls:EditableListBox.EditPanelTemplate>
+									<DataTemplate x:DataType="models:MainModelCategoryItemEnumValue">
+										<StackPanel Orientation="Vertical">
+											<TextBlock Text="Regex:"/>
+											<TextBox AcceptsReturn="False" AcceptsTab="False"
+															 Text="{Binding Regex}"/>
+										</StackPanel>
+									</DataTemplate>
+								</ctls:EditableListBox.EditPanelTemplate>
 							</ctls:EditableListBox>
 						</Grid>
 

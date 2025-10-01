@@ -64,10 +64,28 @@ public sealed partial class MainModelGroup : ObservableObject
     public partial string Name { get; set; }
 
     [ObservableProperty]
+    public partial ObservableCollection<MainModelGroupAlternativeName> AlternativeNames { get; set; } = [];
+
+    [ObservableProperty]
     public partial ObservableCollection<MainModelGroupMember> Members { get; set; } = [];
 }
 
 public sealed partial class MainModelGroupMember : ObservableObject
+{
+    [ObservableProperty]
+    public partial string Name { get; set; }
+
+    [ObservableProperty]
+    public partial ObservableCollection<MainModelGroupMemberAlternativeName> AlternativeNames { get; set; } = [];
+}
+
+public sealed partial class MainModelGroupAlternativeName : ObservableObject
+{
+    [ObservableProperty]
+    public partial string Name { get; set; }
+}
+
+public sealed partial class MainModelGroupMemberAlternativeName : ObservableObject
 {
     [ObservableProperty]
     public partial string Name { get; set; }

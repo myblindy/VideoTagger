@@ -105,6 +105,26 @@ public partial class EditableListBox : UserControl
         set => SetValue(NoItemsTextProperty, value);
     }
 
+    public static readonly StyledProperty<IDataTemplate?> EditPanelTemplateProperty =
+        AvaloniaProperty.Register<EditableListBox, IDataTemplate?>(nameof(EditPanelTemplate));
+    public IDataTemplate? EditPanelTemplate
+    {
+        get => GetValue(EditPanelTemplateProperty);
+        set => SetValue(EditPanelTemplateProperty, value);
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        if (change.Property == EditPanelTemplateProperty)
+        {
+            Grid.ColumnDefinitions.Clear();
+            if (EditPanelTemplate is not null)
+                Grid.ColumnDefinitions.AddRange([new(GridLength.Auto), new(GridLength.Star)]);
+        }
+
+        base.OnPropertyChanged(change);
+    }
+
     public EditableListBox()
     {
         InitializeComponent();

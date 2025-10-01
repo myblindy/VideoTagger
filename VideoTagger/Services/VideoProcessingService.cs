@@ -13,19 +13,21 @@ namespace VideoTagger.Services;
 
 public sealed partial class VideoProcessingService(MainModel mainModel)
 {
-    public Task UpdateVideosAsync()
+    public async Task UpdateVideosAsync()
     {
         var allMemberSearchValues = mainModel.Groups.ToDictionary(g => g, g =>
             SearchValues.Create(g.Members.Select(m => m.Name).ToArray(), StringComparison.OrdinalIgnoreCase));
 
-        return Task.WhenAll(mainModel.Folders.SelectMany(f => Directory.EnumerateFiles(f.Path, "*", SearchOption.AllDirectories))
+        var tags = await Task.WhenAll(mainModel.Folders.SelectMany(f => Directory.EnumerateFiles(f.Path, "*", SearchOption.AllDirectories))
             .Where(f => Path.GetExtension(f.ToLowerInvariant()) is ".avi" or ".mkv" or ".mp4" or ".mov" or ".webm")
-            .Select(f => Task.Run(() => ProcessVideo(f))));
+            .Select(f => Task.Run(() => (path: f, tags: ProcessVideo(f)))));
 
-        void ProcessVideo(string filePath)
+        var validTags = tags.Where(t => t.tags.Count > 0).ToArray();
+
+        Dictionary<MainModelGroupMember, Dictionary<(MainModelCategory category, MainModelCategoryItem item), object>> ProcessVideo(string filePath)
         {
             var fileName = Path.GetFileNameWithoutExtension(filePath);
-            if (VideoPartsRegex().Match(fileName) is not { Success: true } m) return;
+            if (VideoPartsRegex().Match(fileName) is not { Success: true } m) return [];
             var videoParts = m.Groups!;
 
             // date
@@ -37,12 +39,14 @@ public sealed partial class VideoProcessingService(MainModel mainModel)
             }
 
             // group name
-            var group = mainModel.Groups.FirstOrDefault(g => g.Name.Equals(videoParts[2].ValueSpan, StringComparison.OrdinalIgnoreCase));
+            var group = mainModel.Groups.FirstOrDefault(g =>
+                g.Name.Equals(videoParts[2].ValueSpan, StringComparison.OrdinalIgnoreCase)
+                || g.AlternativeNames.Any(an => an.Name.Equals(videoParts[2].ValueSpan, StringComparison.OrdinalIgnoreCase)));
 
             if (group is null)
             {
                 // do stuff for unknown group
-                return;
+                return [];
             }
 
             // split strings by members
@@ -76,11 +80,11 @@ public sealed partial class VideoProcessingService(MainModel mainModel)
                     foreach (var categoryItem in category.Items)
                         if (categoryItem.IsBoolean)
                         {
-                            if ((categoryItem.BooleanRegex is not null && Regex.IsMatch(@string, categoryItem.BooleanRegex, RegexOptions.IgnoreCase))
-                                || (categoryItem.BooleanRegex is null && Regex.IsMatch(@string, @$"\b{Regex.Escape(categoryItem.Name)}\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)))
+                            if (Regex.IsMatch(@string, categoryItem.BooleanRegex ?? @$"\b{Regex.Escape(categoryItem.Name)}\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
                             {
                                 tags.TryAdd(member, []);
                                 tags[member][(category, categoryItem)] = true;
+                                break;
                             }
                         }
                         else
@@ -92,10 +96,13 @@ public sealed partial class VideoProcessingService(MainModel mainModel)
                                 {
                                     tags.TryAdd(member, []);
                                     tags[member][(category, categoryItem)] = enumValue.EnumValue;
+                                    break;
                                 }
                             }
                         }
             }
+
+            return tags;
         }
     }
 
