@@ -3,18 +3,32 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Dialogs;
 using FluentAvalonia.UI.Windowing;
+using LiteDB;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Simple.Avalonia.Hosting;
 using System;
+using System.IO;
 using VideoTagger;
 using VideoTagger.Models;
 using VideoTagger.Services;
 using VideoTagger.ViewModels;
 using VideoTagger.Views;
 
+var dbPath = Path.Combine(
+    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+    "VideoTagger", "videotagger.db");
+Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
+
 var builder = Host.CreateApplicationBuilder(args);
 builder.Services
+    .AddSingleton<ILiteDatabase, LiteDatabase>(_ => new LiteDatabase(new ConnectionString(dbPath)
+    {
+        AutoRebuild = true,
+        Connection = ConnectionType.Shared,
+        Upgrade = true
+    }))
+
     .AddDbService()
     .AddDialogService()
     .AddVideoProcessingService()
