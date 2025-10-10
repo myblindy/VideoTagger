@@ -13,6 +13,7 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml;
 using VideoTagger.Models;
 
 namespace VideoTagger.Services;
@@ -116,6 +117,7 @@ public sealed partial class VideoProcessingService(MainModel mainModel, ILogger<
     private static partial Regex VideoPartsRegex();
 
     av_log_set_callback_callback? ffmpegLogCallback;
+    int ffmpegLogPrintPrefix = 1;
     public Task StartAsync(CancellationToken cancellationToken)
     {
         FFmpegLoader.SearchApplication()
@@ -129,10 +131,27 @@ public sealed partial class VideoProcessingService(MainModel mainModel, ILogger<
             {
                 const int lineSize = 1024;
                 byte* line = stackalloc byte[lineSize];
-                ffmpeg.av_log_format_line(avcl, level, fmt, va, line, lineSize, null);
-                logger.LogDebug("[FFmpeg] {Message}", Marshal.PtrToStringUTF8((IntPtr)line) ?? string.Empty);
+                fixed (int* ffmpegLogPrintPrefix = &this.ffmpegLogPrintPrefix)
+                    ffmpeg.av_log_format_line(avcl, level, fmt, va, line, lineSize, ffmpegLogPrintPrefix);
+                logger.Log(level switch
+                {
+                    ffmpeg.AV_LOG_PANIC or ffmpeg.AV_LOG_FATAL or ffmpeg.AV_LOG_ERROR => LogLevel.Error,
+                    ffmpeg.AV_LOG_WARNING => LogLevel.Warning,
+                    ffmpeg.AV_LOG_INFO => LogLevel.Information,
+                    ffmpeg.AV_LOG_VERBOSE or ffmpeg.AV_LOG_DEBUG => LogLevel.Debug,
+                    _ => LogLevel.Trace
+                }, "[FFmpeg] {Message}", Marshal.PtrToStringUTF8((IntPtr)line) ?? string.Empty);
             };
             ffmpeg.av_log_set_callback(ffmpegLogCallback);
+            ffmpeg.av_log_set_level(
+#if DEBUG   
+                ffmpeg.AV_LOG_DEBUG
+#else
+                ffmpeg.AV_LOG_WARNING
+#endif
+                );
+
+            ffmpeg.av_log(null, ffmpeg.AV_LOG_INFO, $"FFmpeg initialized, version: {ffmpeg.av_version_info()}");
         }
         return Task.CompletedTask;
     }
