@@ -1,3 +1,10 @@
 <Solution>
-  <Project Path="VideoTagger/VideoTagger.csproj" />
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="VideoTagger.Shared.FFmpegBinaries/VideoTagger.Shared.FFmpegBinaries.shproj" Id="76bfd097-6c5c-469f-8b47-fdf1eabe3d6b" />
+  <Project Path="VideoTagger/VideoTagger.csproj">
+    <Platform Solution="*|x64" Project="x64" />
+  </Project>
 </Solution>

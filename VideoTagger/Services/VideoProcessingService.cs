@@ -1,17 +1,23 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using FFmpeg.AutoGen;
+using FFmpeg.Loader;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using VideoTagger.Models;
 
 namespace VideoTagger.Services;
 
-public sealed partial class VideoProcessingService(MainModel mainModel)
+public sealed partial class VideoProcessingService(MainModel mainModel, ILogger<VideoProcessingService> logger) : IHostedService
 {
     public async Task UpdateVideosAsync()
     {
@@ -108,10 +114,36 @@ public sealed partial class VideoProcessingService(MainModel mainModel)
 
     [GeneratedRegex(@"^\s*(?:(\d+)\s+)?(.+?)\s+-\s*(.*)$")]
     private static partial Regex VideoPartsRegex();
+
+    av_log_set_callback_callback? ffmpegLogCallback;
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        FFmpegLoader.SearchApplication()
+            .ThenSearchPaths("./runtimes/win-x64/native")
+            .ThenSearchSystem()
+            .Load();
+
+        unsafe
+        {
+            ffmpegLogCallback = (avcl, level, fmt, va) =>
+            {
+                const int lineSize = 1024;
+                byte* line = stackalloc byte[lineSize];
+                ffmpeg.av_log_format_line(avcl, level, fmt, va, line, lineSize, null);
+                logger.LogDebug("[FFmpeg] {Message}", Marshal.PtrToStringUTF8((IntPtr)line) ?? string.Empty);
+            };
+            ffmpeg.av_log_set_callback(ffmpegLogCallback);
+        }
+        return Task.CompletedTask;
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken) =>
+        Task.CompletedTask;
 }
 
 static class VideoProcessingServiceExtensions
 {
-    public static IServiceCollection AddVideoProcessingService(this IServiceCollection services) =>
-        services.AddSingleton<VideoProcessingService>();
+    public static IServiceCollection AddVideoProcessingService(this IServiceCollection services) => services
+        .AddSingleton<VideoProcessingService>()
+        .AddHostedService(p => p.GetRequiredService<VideoProcessingService>());
 }

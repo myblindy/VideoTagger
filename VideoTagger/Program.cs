@@ -10,6 +10,7 @@ using Simple.Avalonia.Hosting;
 using System;
 using System.IO;
 using VideoTagger;
+using VideoTagger.Helpers;
 using VideoTagger.Models;
 using VideoTagger.Services;
 using VideoTagger.ViewModels;

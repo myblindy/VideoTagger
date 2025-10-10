@@ -35,14 +35,14 @@ public sealed class DbService : ObservableObject
         categoryItemsCollection = db.GetCollection<MainModelCategoryItem>();
         categoryItemEnumValuesCollection = db.GetCollection<MainModelCategoryItemEnumValue>();
 
-        LiteDBHelper.Register<MainModelCategory, MainModelCategoryItem>(w => w.Items);
-        LiteDBHelper.Register<MainModelCategoryItem, MainModelCategoryItemEnumValue>(w => w.EnumValues);
-        LiteDBHelper.Register<MainModelGroup, MainModelGroupMember>(w => w.Members);
-        LiteDBHelper.Register<MainModelVideoCacheTag, MainModelGroup>(w => w.Group);
-        LiteDBHelper.Register<MainModelVideoCacheTag, MainModelGroupMember>(w => w.Member);
-        LiteDBHelper.Register<MainModelVideoCacheTagItem, MainModelCategory>(w => w.Category);
-        LiteDBHelper.Register<MainModelVideoCacheTagItem, MainModelCategoryItem>(w => w.Item);
-        LiteDBHelper.Register<MainModelVideoCacheTagItem, MainModelCategoryItemEnumValue>(w => w.EnumValue);
+        LiteDBHelpers.Register<MainModelCategory, MainModelCategoryItem>(w => w.Items);
+        LiteDBHelpers.Register<MainModelCategoryItem, MainModelCategoryItemEnumValue>(w => w.EnumValues);
+        LiteDBHelpers.Register<MainModelGroup, MainModelGroupMember>(w => w.Members);
+        LiteDBHelpers.Register<MainModelVideoCacheTag, MainModelGroup>(w => w.Group);
+        LiteDBHelpers.Register<MainModelVideoCacheTag, MainModelGroupMember>(w => w.Member);
+        LiteDBHelpers.Register<MainModelVideoCacheTagItem, MainModelCategory>(w => w.Category);
+        LiteDBHelpers.Register<MainModelVideoCacheTagItem, MainModelCategoryItem>(w => w.Item);
+        LiteDBHelpers.Register<MainModelVideoCacheTagItem, MainModelCategoryItemEnumValue>(w => w.EnumValue);
 
         // misc properties
         if (miscInternalCollection.FindAll().FirstOrDefault() is { } misc)

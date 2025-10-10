@@ -7,6 +7,8 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
 		<LangVersion>preview</LangVersion>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
 
   <ItemGroup>
@@ -25,6 +27,10 @@
     <PackageReference Include="Avalonia.ReactiveUI" Version="11.3.7" />
 		
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+		
+    <PackageReference Include="FFmpeg.AutoGen" Version="7.1.1" />
+		
+    <PackageReference Include="FFmpeg.Loader" Version="3.0.2" />
 		<PackageReference Include="FluentAvaloniaUI" Version="2.4.0" />
 		<PackageReference Include="LibMpv.Avalonia" Version="1.0.0" />
 		<PackageReference Include="LiteDB" Version="5.0.21" />
@@ -32,4 +38,6 @@
 		<PackageReference Include="Simple.Avalonia.Hosting" Version="8.5.0" />
 		<PackageReference Include="SuperLinq.Async" Version="6.4.0" />
 	</ItemGroup>
+
+  <Import Project="..\VideoTagger.Shared.FFmpegBinaries\VideoTagger.Shared.FFmpegBinaries.projitems" Label="Shared" />
 </Project>
