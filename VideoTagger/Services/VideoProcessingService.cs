@@ -1,20 +1,26 @@
-﻿using FFmpeg.AutoGen;
+﻿using Avalonia;
+using FFmpeg.AutoGen;
 using FFmpeg.Loader;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using VideoTagger.Models;
+
+using static FFmpeg.AutoGen.ffmpeg;
 
 namespace VideoTagger.Services;
 
@@ -116,7 +122,101 @@ public sealed partial class VideoProcessingService(MainModel mainModel, ILogger<
     [GeneratedRegex(@"^\s*(?:(\d+)\s+)?(.+?)\s+-\s*(.*)$")]
     private static partial Regex VideoPartsRegex();
 
+    static unsafe void WriteVideoCoverImageToStream(string videoPath, Stream outputStream, AVHWDeviceType hwDeviceType = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE)
+    {
+        // open video
+        var formatContext = avformat_alloc_context();
+        avformat_open_input(&formatContext, videoPath, null, null).ThrowIfError();
+        avformat_find_stream_info(formatContext, null).ThrowIfError();
+
+        AVCodec* codec = null;
+        var streamIndex = av_find_best_stream(formatContext, AVMediaType.AVMEDIA_TYPE_VIDEO, -1, -1, &codec, 0)
+            .ThrowIfError();
+        var codecContext = avcodec_alloc_context3(codec);
+
+        if (hwDeviceType != AVHWDeviceType.AV_HWDEVICE_TYPE_NONE)
+            av_hwdevice_ctx_create(&codecContext->hw_device_ctx, AVHWDeviceType.AV_HWDEVICE_TYPE_D3D11VA, null, null, 0).ThrowIfError();
+
+        avcodec_parameters_to_context(codecContext, formatContext->streams[streamIndex]->codecpar).ThrowIfError();
+        avcodec_open2(codecContext, codec, null).ThrowIfError();
+
+        var frameSize = new SixLabors.ImageSharp.Size(codecContext->width, codecContext->height);
+        var inputPixelFormat = codecContext->pix_fmt;
+
+        var packet = av_packet_alloc();
+        var frame = av_frame_alloc();
+        AVFrame* receivedFrame = default;
+
+        // decode the next frame
+        var error = 0;
+        do
+        {
+            try
+            {
+                do
+                {
+                    av_packet_unref(packet);
+                    error = av_read_frame(formatContext, packet);
+                    if (error == AVERROR_EOF)
+                        goto gotFrame;
+                    error.ThrowIfError();
+                } while (packet->stream_index != streamIndex);
+
+                avcodec_send_packet(codecContext, packet).ThrowIfError();
+            }
+            finally { av_packet_unref(packet); }
+
+            error = avcodec_receive_frame(codecContext, frame);
+        } while (error == AVERROR(EAGAIN));
+        error.ThrowIfError();
+
+        gotFrame:
+        if (codecContext->hw_device_ctx is not null)
+        {
+            receivedFrame = av_frame_alloc();
+            av_hwframe_transfer_data(receivedFrame, frame, 0).ThrowIfError();
+            av_frame_free(&frame);
+        }
+        else
+            receivedFrame = frame;
+
+        // process frame
+        const AVPixelFormat destinationPixelFormat = AVPixelFormat.AV_PIX_FMT_BGR24;
+        var convertContext = sws_getContext(
+            frameSize.Width, frameSize.Height, inputPixelFormat,
+            frameSize.Width, frameSize.Height, destinationPixelFormat,
+            0, null, null, null);
+
+        var convertedFrameBufferSize = av_image_get_buffer_size(destinationPixelFormat, frameSize.Width, frameSize.Height, 1);
+        byte* convertedFrameBuffer = (byte*)av_malloc((ulong)convertedFrameBufferSize);
+
+        byte_ptrArray4 destinationData = default;
+        int_array4 destinationLineSize = default;
+        av_image_fill_arrays(ref destinationData, ref destinationLineSize, convertedFrameBuffer, destinationPixelFormat,
+            frameSize.Width, frameSize.Height, 1).ThrowIfError();
+
+        sws_scale(convertContext, receivedFrame->data, receivedFrame->linesize, 0, frameSize.Height,
+            destinationData, destinationLineSize).ThrowIfError();
+
+        // convert the frame to a bitmap and write it to the stream
+        using var image = Image.LoadPixelData(
+            new ReadOnlySpan<Bgr24>((Bgr24*)destinationData[0], convertedFrameBufferSize),
+            frameSize.Width, frameSize.Height);
+        image.SaveAsJpeg(outputStream);
+
+        // cleanup
+        av_freep(&convertedFrameBuffer);
+        sws_freeContext(convertContext);
+        av_frame_free(&receivedFrame);
+        av_packet_free(&packet);
+        avcodec_free_context(&codecContext);
+        avformat_close_input(&formatContext);
+    }
+
     av_log_set_callback_callback? ffmpegLogCallback;
+
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0044:Add readonly modifier",
+        Justification = "Not readonly, modified in native code")]
     int ffmpegLogPrintPrefix = 1;
     public Task StartAsync(CancellationToken cancellationToken)
     {
@@ -129,29 +229,33 @@ public sealed partial class VideoProcessingService(MainModel mainModel, ILogger<
         {
             ffmpegLogCallback = (avcl, level, fmt, va) =>
             {
+                var logLevel = level switch
+                {
+                    AV_LOG_PANIC or AV_LOG_FATAL or AV_LOG_ERROR => LogLevel.Error,
+                    AV_LOG_WARNING => LogLevel.Warning,
+                    AV_LOG_INFO => LogLevel.Information,
+                    AV_LOG_VERBOSE or AV_LOG_DEBUG => LogLevel.Debug,
+                    _ => LogLevel.Trace
+                };
+                if (!logger.IsEnabled(logLevel))
+                    return;
+
                 const int lineSize = 1024;
                 byte* line = stackalloc byte[lineSize];
                 fixed (int* ffmpegLogPrintPrefix = &this.ffmpegLogPrintPrefix)
-                    ffmpeg.av_log_format_line(avcl, level, fmt, va, line, lineSize, ffmpegLogPrintPrefix);
-                logger.Log(level switch
-                {
-                    ffmpeg.AV_LOG_PANIC or ffmpeg.AV_LOG_FATAL or ffmpeg.AV_LOG_ERROR => LogLevel.Error,
-                    ffmpeg.AV_LOG_WARNING => LogLevel.Warning,
-                    ffmpeg.AV_LOG_INFO => LogLevel.Information,
-                    ffmpeg.AV_LOG_VERBOSE or ffmpeg.AV_LOG_DEBUG => LogLevel.Debug,
-                    _ => LogLevel.Trace
-                }, "[FFmpeg] {Message}", Marshal.PtrToStringUTF8((IntPtr)line) ?? string.Empty);
+                    av_log_format_line(avcl, level, fmt, va, line, lineSize, ffmpegLogPrintPrefix);
+                logger.Log(logLevel, "[FFmpeg] {Message}", Marshal.PtrToStringUTF8((IntPtr)line) ?? string.Empty);
             };
-            ffmpeg.av_log_set_callback(ffmpegLogCallback);
-            ffmpeg.av_log_set_level(
+            av_log_set_callback(ffmpegLogCallback);
+            av_log_set_level(
 #if DEBUG   
-                ffmpeg.AV_LOG_DEBUG
+                AV_LOG_DEBUG
 #else
                 ffmpeg.AV_LOG_WARNING
 #endif
                 );
 
-            ffmpeg.av_log(null, ffmpeg.AV_LOG_INFO, $"FFmpeg initialized, version: {ffmpeg.av_version_info()}");
+            av_log(null, AV_LOG_INFO, $"FFmpeg initialized, version: {av_version_info()}");
         }
         return Task.CompletedTask;
     }
@@ -165,4 +269,30 @@ static class VideoProcessingServiceExtensions
     public static IServiceCollection AddVideoProcessingService(this IServiceCollection services) => services
         .AddSingleton<VideoProcessingService>()
         .AddHostedService(p => p.GetRequiredService<VideoProcessingService>());
+}
+
+file static class FFmpegExtensions
+{
+    public static unsafe int ThrowIfError(this int error,
+        [CallerMemberName] string? callerMemberName = null,
+        [CallerLineNumber] int callerLineNumber = 0)
+    {
+        if (error < 0)
+        {
+            var buffer = ArrayPool<byte>.Shared.Rent(1024);
+            try
+            {
+                fixed (byte* bufferPtr = &buffer[0])
+                {
+                    av_strerror(error, bufferPtr, (ulong)buffer.Length);
+                    throw new ApplicationException($"FFmpeg error in {callerMemberName}:{callerLineNumber}: {Marshal.PtrToStringUTF8(new(bufferPtr))}");
+                }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+            }
+        }
+        return error;
+    }
 }
