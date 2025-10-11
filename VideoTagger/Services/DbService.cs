@@ -1,7 +1,13 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using Avalonia.Controls.Templates;
+using CommunityToolkit.Mvvm.ComponentModel;
 using LiteDB;
 using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using VideoTagger.Helpers;
 using VideoTagger.Models;
 
@@ -9,6 +15,7 @@ namespace VideoTagger.Services;
 
 public sealed class DbService : ObservableObject
 {
+    readonly ILiteDatabase db;
     readonly ILiteCollection<MainModelCategory> categoriesCollection;
     readonly ILiteCollection<MainModelFolder> foldersCollection;
     readonly ILiteCollection<MainModelGroup> groupsCollection;
@@ -26,6 +33,7 @@ public sealed class DbService : ObservableObject
 
     public DbService(ILiteDatabase db)
     {
+        this.db = db;
         categoriesCollection = db.GetCollection<MainModelCategory>();
         foldersCollection = db.GetCollection<MainModelFolder>();
         groupsCollection = db.GetCollection<MainModelGroup>();
@@ -113,6 +121,57 @@ public sealed class DbService : ObservableObject
         videoCacheCollection.Insert(mainModel.VideoCache);
 
         IsDirty = true;
+    }
+
+    readonly ConcurrentBag<(MainModelVideoCache entry, Func<byte[]?>? coverImageBytesGetter, bool forceCoverImageUpdate)> videoCacheEntryUpdates = [];
+    public void QueueVideoCacheEntryUpdate(MainModelVideoCache entry, Func<byte[]?>? coverImageBytesGetter = null, bool forceCoverImageUpdate = false) =>
+        videoCacheEntryUpdates.Add((entry, coverImageBytesGetter, forceCoverImageUpdate));
+
+    public async Task CommitVideoCacheEntryUpdatesAsync()
+    {
+        var allExistingEntries = videoCacheCollection.FindAll().ToDictionary(x => x.Path, x => x);
+        List<MainModelVideoCache> updates = [], inserts = [];
+        List<Task> coverImageWriteTasks = [];
+
+        foreach (var (entry, coverImageBytesGetter, forceCoverImageUpdate) in videoCacheEntryUpdates)
+        {
+            void HandleCoverImageFile(MainModelVideoCache? existingEntry)
+            {
+                if ((forceCoverImageUpdate || existingEntry?.CoverImageFileName is null) && coverImageBytesGetter?.Invoke() is { } imageBytes)
+                {
+                    entry.CoverImageFileName ??= existingEntry?.CoverImageFileName
+                        ?? Guid.NewGuid().ToString("N") + ".jpg";
+                    db.FileStorage.Upload(entry.CoverImageFileName, entry.CoverImageFileName, new MemoryStream(imageBytes));
+                }
+                else if ((forceCoverImageUpdate || existingEntry?.CoverImageFileName is not null) && coverImageBytesGetter is null)
+                {
+                    if (existingEntry?.CoverImageFileName is { } existingCoverImageFileName)
+                        db.FileStorage.Delete(existingCoverImageFileName);
+                    entry.CoverImageFileName = null;
+                }
+                else
+                    entry.CoverImageFileName = existingEntry?.CoverImageFileName;
+            }
+
+            if (allExistingEntries.TryGetValue(entry.Path, out var existingEntry))
+            {
+                entry.Id = existingEntry.Id;
+                coverImageWriteTasks.Add(Task.Run(() => HandleCoverImageFile(existingEntry)));
+                updates.Add(entry);
+            }
+            else
+            {
+                coverImageWriteTasks.Add(Task.Run(() => HandleCoverImageFile(null)));
+                inserts.Add(entry);
+            }
+        }
+
+        await Task.WhenAll(coverImageWriteTasks).ConfigureAwait(false);
+        videoCacheCollection.InsertBulk(inserts);
+        videoCacheCollection.Update(updates);
+
+        videoCacheEntryUpdates.Clear();
+        IsDirty = false;
     }
 
     public bool IsDirty

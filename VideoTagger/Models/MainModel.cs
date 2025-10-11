@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using LiteDB;
+using System;
 using System.Collections.ObjectModel;
 
 namespace VideoTagger.Models;
@@ -19,6 +20,12 @@ public sealed partial class MainModelVideoCache : ObservableObject
 
     [ObservableProperty]
     public partial string Path { get; set; }
+
+    [ObservableProperty]
+    public partial DateTime Date { get; set; }
+
+    [ObservableProperty]
+    public partial string? CoverImageFileName { get; set; }
 
     [ObservableProperty]
     public partial ObservableCollection<MainModelVideoCacheTag> Tags { get; set; } = [];

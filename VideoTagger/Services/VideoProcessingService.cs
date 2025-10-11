@@ -1,5 +1,4 @@
-﻿using Avalonia;
-using FFmpeg.AutoGen;
+﻿using FFmpeg.AutoGen;
 using FFmpeg.Loader;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -17,112 +16,143 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml;
 using VideoTagger.Models;
 
 using static FFmpeg.AutoGen.ffmpeg;
 
 namespace VideoTagger.Services;
 
-public sealed partial class VideoProcessingService(MainModel mainModel, ILogger<VideoProcessingService> logger) : IHostedService
+public sealed partial class VideoProcessingService(
+    MainModel mainModel, DbService dbService, ILogger<VideoProcessingService> logger)
+    : IHostedService
 {
     public async Task UpdateVideosAsync()
     {
         var allMemberSearchValues = mainModel.Groups.ToDictionary(g => g, g =>
             SearchValues.Create(g.Members.Select(m => m.Name).ToArray(), StringComparison.OrdinalIgnoreCase));
 
-        var tags = await Task.WhenAll(mainModel.Folders.SelectMany(f => Directory.EnumerateFiles(f.Path, "*", SearchOption.AllDirectories))
+        await Task.WhenAll(mainModel.Folders.SelectMany(f => Directory.EnumerateFiles(f.Path, "*", SearchOption.AllDirectories))
             .Where(f => Path.GetExtension(f.ToLowerInvariant()) is ".avi" or ".mkv" or ".mp4" or ".mov" or ".webm")
-            .Select(f => Task.Run(() => (path: f, tags: ProcessVideo(f)))));
+            .Select(f => Task.Run(() => ProcessVideo(f))));
+        await dbService.CommitVideoCacheEntryUpdatesAsync();
 
-        var validTags = tags.Where(t => t.tags.Count > 0).ToArray();
+        //foreach (var f in mainModel.Folders.SelectMany(f => Directory.EnumerateFiles(f.Path, "*", SearchOption.AllDirectories))
+        //    .Where(f => Path.GetExtension(f.ToLowerInvariant()) is ".avi" or ".mkv" or ".mp4" or ".mov" or ".webm"))
+        //{
+        //    ProcessVideo(f);
+        //}
 
-        Dictionary<MainModelGroupMember, Dictionary<(MainModelCategory category, MainModelCategoryItem item), object>> ProcessVideo(string filePath)
+        void ProcessVideo(string filePath)
         {
-            var fileName = Path.GetFileNameWithoutExtension(filePath);
-            if (VideoPartsRegex().Match(fileName) is not { Success: true } m) return [];
-            var videoParts = m.Groups!;
+            var result = new MainModelVideoCache { Path = filePath };
+            Func<byte[]?>? coverImageBytes = null;
 
-            // date
-            DateTime? date;
-            if (videoParts[1].Success == true
-                && DateTime.TryParseExact(videoParts[1].ValueSpan, ["yyyyMMdd", "yyMMdd"], CultureInfo.InvariantCulture, DateTimeStyles.None, out var foundDate))
+            try
             {
-                date = foundDate;
-            }
+                var fileName = Path.GetFileNameWithoutExtension(filePath);
+                if (VideoPartsRegex().Match(fileName) is not { Success: true } m) return;
+                var videoParts = m.Groups!;
 
-            // group name
-            var group = mainModel.Groups.FirstOrDefault(g =>
-                g.Name.Equals(videoParts[2].ValueSpan, StringComparison.OrdinalIgnoreCase)
-                || g.AlternativeNames.Any(an => an.Name.Equals(videoParts[2].ValueSpan, StringComparison.OrdinalIgnoreCase)));
+                // date
+                if (videoParts[1].Success == true
+                    && DateTime.TryParseExact(videoParts[1].ValueSpan, ["yyyyMMdd", "yyMMdd"], CultureInfo.InvariantCulture, DateTimeStyles.None, out var foundDate))
+                {
+                    result.Date = foundDate;
+                }
 
-            if (group is null)
-            {
-                // do stuff for unknown group
-                return [];
-            }
+                // group name
+                var group = mainModel.Groups.FirstOrDefault(g =>
+                    g.Name.Equals(videoParts[2].ValueSpan, StringComparison.OrdinalIgnoreCase)
+                    || g.AlternativeNames.Any(an => an.Name.Equals(videoParts[2].ValueSpan, StringComparison.OrdinalIgnoreCase)));
 
-            // split strings by members
-            var memberSearchValues = allMemberSearchValues[group];
-            List<(MainModelGroupMember member, string @string)> memberStrings = [];
-            MainModelGroupMember? currentMember = default;
-            int currentStartIndex = 0;
-            for (int index = videoParts[3].ValueSpan.IndexOfAny(memberSearchValues);
-                index >= 0;
-                index = videoParts[3].ValueSpan[index..].IndexOfAny(memberSearchValues) is { } newIndex ? newIndex >= 0 ? index + newIndex : -1 : -1)
-            {
-                foreach (var member in group.Members)
-                    if (videoParts[3].ValueSpan.Slice(index, member.Name.Length).Equals(member.Name, StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (currentMember is not null)
-                            memberStrings.Add((currentMember, videoParts[3].ValueSpan[currentStartIndex..index].ToString()));
+                if (group is null)
+                {
+                    // do stuff for unknown group
+                    return;
+                }
 
-                        currentMember = member;
-                        currentStartIndex = index += member.Name.Length;
-                        break;
-                    }
-            }
-            if (currentMember is not null)
-                memberStrings.Add((currentMember, videoParts[3].ValueSpan[currentStartIndex..].ToString()));
-
-            // members
-            Dictionary<MainModelGroupMember, Dictionary<(MainModelCategory category, MainModelCategoryItem item), object>> tags = [];
-            foreach (var (member, @string) in memberStrings)
-            {
-                foreach (var category in mainModel.Categories)
-                    foreach (var categoryItem in category.Items)
-                        if (categoryItem.IsBoolean)
+                // split strings by members
+                var memberSearchValues = allMemberSearchValues[group];
+                List<(MainModelGroupMember member, string @string)> memberStrings = [];
+                MainModelGroupMember? currentMember = default;
+                int currentStartIndex = 0;
+                for (int index = videoParts[3].ValueSpan.IndexOfAny(memberSearchValues);
+                    index >= 0;
+                    index = videoParts[3].ValueSpan[index..].IndexOfAny(memberSearchValues) is { } newIndex ? newIndex >= 0 ? index + newIndex : -1 : -1)
+                {
+                    foreach (var member in group.Members)
+                        if (videoParts[3].ValueSpan.Slice(index, member.Name.Length).Equals(member.Name, StringComparison.OrdinalIgnoreCase))
                         {
-                            if (Regex.IsMatch(@string, categoryItem.BooleanRegex ?? @$"\b{Regex.Escape(categoryItem.Name)}\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
-                            {
-                                tags.TryAdd(member, []);
-                                tags[member][(category, categoryItem)] = true;
-                                break;
-                            }
+                            if (currentMember is not null)
+                                memberStrings.Add((currentMember, videoParts[3].ValueSpan[currentStartIndex..index].ToString()));
+
+                            currentMember = member;
+                            currentStartIndex = index += member.Name.Length;
+                            break;
                         }
-                        else
-                        {
-                            foreach (var enumValue in categoryItem.EnumValues)
+                }
+                if (currentMember is not null)
+                    memberStrings.Add((currentMember, videoParts[3].ValueSpan[currentStartIndex..].ToString()));
+
+                // members
+                Dictionary<MainModelGroupMember, Dictionary<(MainModelCategory category, MainModelCategoryItem item), object>> tags = [];
+                foreach (var (member, @string) in memberStrings)
+                {
+                    foreach (var category in mainModel.Categories)
+                        foreach (var categoryItem in category.Items)
+                            if (categoryItem.IsBoolean)
                             {
-                                if (enumValue.Regex is not null
-                                    && Regex.IsMatch(@string, enumValue.Regex, RegexOptions.IgnoreCase))
+                                if (Regex.IsMatch(@string, categoryItem.BooleanRegex ?? @$"\b{Regex.Escape(categoryItem.Name)}\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
                                 {
                                     tags.TryAdd(member, []);
-                                    tags[member][(category, categoryItem)] = enumValue.EnumValue;
+                                    tags[member][(category, categoryItem)] = true;
                                     break;
                                 }
                             }
-                        }
-            }
+                            else
+                            {
+                                foreach (var enumValue in categoryItem.EnumValues)
+                                {
+                                    if (enumValue.Regex is not null
+                                        && Regex.IsMatch(@string, enumValue.Regex, RegexOptions.IgnoreCase))
+                                    {
+                                        tags.TryAdd(member, []);
+                                        tags[member][(category, categoryItem)] = enumValue;
+                                        break;
+                                    }
+                                }
+                            }
+                }
 
-            return tags;
+                // put it in the result format
+                foreach (var (member, memberTags) in tags)
+                    result.Tags.Add(new MainModelVideoCacheTag
+                    {
+                        Group = group,
+                        Member = member,
+                        Items = new(memberTags.Select(t => new MainModelVideoCacheTagItem
+                        {
+                            Category = t.Key.category,
+                            Item = t.Key.item,
+                            BooleanValue = t.Value is bool b && b,
+                            EnumValue = t.Value as MainModelCategoryItemEnumValue
+                        }))
+                    });
+
+                // cover image
+                coverImageBytes = () => GetVideoCoverImageBytes(filePath, AVHWDeviceType.AV_HWDEVICE_TYPE_NONE);
+            }
+            finally
+            {
+                dbService.QueueVideoCacheEntryUpdate(result, coverImageBytes);
+            }
         }
     }
 
     [GeneratedRegex(@"^\s*(?:(\d+)\s+)?(.+?)\s+-\s*(.*)$")]
     private static partial Regex VideoPartsRegex();
 
-    static unsafe void WriteVideoCoverImageToStream(string videoPath, Stream outputStream, AVHWDeviceType hwDeviceType = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE)
+    static unsafe byte[] GetVideoCoverImageBytes(string videoPath, AVHWDeviceType hwDeviceType = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE)
     {
         // open video
         var formatContext = avformat_alloc_context();
@@ -135,12 +165,12 @@ public sealed partial class VideoProcessingService(MainModel mainModel, ILogger<
         var codecContext = avcodec_alloc_context3(codec);
 
         if (hwDeviceType != AVHWDeviceType.AV_HWDEVICE_TYPE_NONE)
-            av_hwdevice_ctx_create(&codecContext->hw_device_ctx, AVHWDeviceType.AV_HWDEVICE_TYPE_D3D11VA, null, null, 0).ThrowIfError();
+            av_hwdevice_ctx_create(&codecContext->hw_device_ctx, hwDeviceType, null, null, 0).ThrowIfError();
 
         avcodec_parameters_to_context(codecContext, formatContext->streams[streamIndex]->codecpar).ThrowIfError();
         avcodec_open2(codecContext, codec, null).ThrowIfError();
 
-        var frameSize = new SixLabors.ImageSharp.Size(codecContext->width, codecContext->height);
+        var frameSize = new Size(codecContext->width, codecContext->height);
         var inputPixelFormat = codecContext->pix_fmt;
 
         var packet = av_packet_alloc();
@@ -170,7 +200,7 @@ public sealed partial class VideoProcessingService(MainModel mainModel, ILogger<
         } while (error == AVERROR(EAGAIN));
         error.ThrowIfError();
 
-        gotFrame:
+gotFrame:
         if (codecContext->hw_device_ctx is not null)
         {
             receivedFrame = av_frame_alloc();
@@ -180,29 +210,41 @@ public sealed partial class VideoProcessingService(MainModel mainModel, ILogger<
         else
             receivedFrame = frame;
 
+        // compute the scaled down size
+        const int maxWidth = 256, maxHeight = 256;
+        Size scaledFrameSize;
+
+        var aspectRatio = (double)frameSize.Width / frameSize.Height;
+        if (aspectRatio > 1)
+            scaledFrameSize = new Size(maxWidth, (int)(maxWidth / aspectRatio));
+        else
+            scaledFrameSize = new Size((int)(maxHeight * aspectRatio), maxHeight);
+
         // process frame
-        const AVPixelFormat destinationPixelFormat = AVPixelFormat.AV_PIX_FMT_BGR24;
+        const AVPixelFormat destinationPixelFormat = AVPixelFormat.AV_PIX_FMT_BGRA;
         var convertContext = sws_getContext(
             frameSize.Width, frameSize.Height, inputPixelFormat,
-            frameSize.Width, frameSize.Height, destinationPixelFormat,
-            0, null, null, null);
+            scaledFrameSize.Width, scaledFrameSize.Height, destinationPixelFormat,
+            SWS_BICUBIC, null, null, null);
 
-        var convertedFrameBufferSize = av_image_get_buffer_size(destinationPixelFormat, frameSize.Width, frameSize.Height, 1);
+        var convertedFrameBufferSize = av_image_get_buffer_size(destinationPixelFormat,
+            scaledFrameSize.Width, scaledFrameSize.Height, 1);
         byte* convertedFrameBuffer = (byte*)av_malloc((ulong)convertedFrameBufferSize);
 
         byte_ptrArray4 destinationData = default;
         int_array4 destinationLineSize = default;
         av_image_fill_arrays(ref destinationData, ref destinationLineSize, convertedFrameBuffer, destinationPixelFormat,
-            frameSize.Width, frameSize.Height, 1).ThrowIfError();
+            scaledFrameSize.Width, scaledFrameSize.Height, 1).ThrowIfError();
 
         sws_scale(convertContext, receivedFrame->data, receivedFrame->linesize, 0, frameSize.Height,
             destinationData, destinationLineSize).ThrowIfError();
 
         // convert the frame to a bitmap and write it to the stream
         using var image = Image.LoadPixelData(
-            new ReadOnlySpan<Bgr24>((Bgr24*)destinationData[0], convertedFrameBufferSize),
-            frameSize.Width, frameSize.Height);
-        image.SaveAsJpeg(outputStream);
+            new ReadOnlySpan<Bgra32>(destinationData[0], convertedFrameBufferSize),
+            scaledFrameSize.Width, scaledFrameSize.Height);
+        using var ms = new MemoryStream();
+        image.SaveAsJpeg(ms);
 
         // cleanup
         av_freep(&convertedFrameBuffer);
@@ -211,6 +253,8 @@ public sealed partial class VideoProcessingService(MainModel mainModel, ILogger<
         av_packet_free(&packet);
         avcodec_free_context(&codecContext);
         avformat_close_input(&formatContext);
+
+        return ms.ToArray();
     }
 
     av_log_set_callback_callback? ffmpegLogCallback;
