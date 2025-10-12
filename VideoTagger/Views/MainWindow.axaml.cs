@@ -8,9 +8,10 @@ public partial class MainWindow : AppWindow
 {
     public MainWindow()
     {
+        TransparencyLevelHint = [WindowTransparencyLevel.Mica];
         InitializeComponent();
 
+        SearchPageView.DataContext = App.GetRequiredService<SearchPageViewModel>();
         SettingsPageView.DataContext = App.GetRequiredService<SettingsPageViewModel>();
-        TransparencyLevelHint = [WindowTransparencyLevel.Mica];
     }
 }

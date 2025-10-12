@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using DynamicData.Binding;
 using LiteDB;
 using System;
 using System.Collections.ObjectModel;
@@ -136,6 +137,10 @@ public sealed partial class MainModelGroupMember : ObservableObject
 {
     [BsonId]
     public int Id { get; set; }
+
+    [ObservableProperty]
+    [BsonIgnore]
+    public partial MainModelGroup Group { get; set; } = null!;
 
     [ObservableProperty]
     public partial string Name { get; set; }

@@ -393,12 +393,13 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
     async Task AddNewGroupMember()
     {
         if (SelectedGroup is null) return;
+
         if (await dialogService.InputValue<string>("New Group Member") is { } newGroupMember)
         {
             var anyChanged = false;
             if (!SelectedGroup.Members.Any(m => m.Name.Equals(newGroupMember, StringComparison.CurrentCultureIgnoreCase)))
             {
-                SelectedGroup.Members.Add(new() { Name = newGroupMember });
+                SelectedGroup.Members.Add(new() { Name = newGroupMember, Group = SelectedGroup });
                 SelectedGroupMember = SelectedGroup.Members[^1];
                 anyChanged = true;
             }

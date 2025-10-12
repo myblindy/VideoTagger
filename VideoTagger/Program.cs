@@ -42,6 +42,9 @@ builder.Services
     .AddSingleton<SettingsPageViewModel>()
     .AddSingleton<SettingsPageView>()
 
+    .AddSingleton<SearchPageViewModel>()
+    .AddSingleton<SearchPageView>()
+
     .AddSingleton<MainWindowViewModel>();
 
 builder.AddAvaloniaDesktopHost<MainWindow>(BuildAvaloniaAppFromServiceProvider);

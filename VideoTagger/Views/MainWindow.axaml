@@ -18,6 +18,9 @@
 		<fctls:CommandBar OverflowButtonVisibility="Collapsed" IsOpen="True" IsSticky="True"
 											IsDynamicOverflowEnabled="False">
 			<fctls:CommandBar.PrimaryCommands>
+				<fctls:CommandBarToggleButton IconSource="Find" Label="Search"
+																			IsChecked="{Binding ShowSearchPage, Mode=OneWay}"
+																			Command="{Binding SelectSearchPageCommand}"/>
 				<fctls:CommandBarToggleButton IconSource="Settings" Label="Settings"
 																			IsChecked="{Binding ShowSettingsPage, Mode=OneWay}"
 																			Command="{Binding SelectSettingsPageCommand}"/>
@@ -28,6 +31,9 @@
 		</fctls:CommandBar>
 
 		<Panel Grid.Row="1" IsVisible="{Binding !Updating}">
+			<views:SearchPageView x:Name="SearchPageView"
+														IsVisible="{Binding #RootWindow.DataContext.ShowSearchPage}"
+														Background="Transparent"/>
 			<views:SettingsPageView x:Name="SettingsPageView"
 															IsVisible="{Binding #RootWindow.DataContext.ShowSettingsPage}"
 															Background="Transparent"/>

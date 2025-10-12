@@ -79,6 +79,10 @@ public sealed class DbService : ObservableObject
         mainModel.VideoCache.AddRange(videoCacheCollection
             .IncludeAll()
             .FindAll());
+
+        foreach (var group in mainModel.Groups)
+            foreach (var member in group.Members)
+                member.Group = group;
     }
 
     public void WriteMainModel(MainModel mainModel)

@@ -23,11 +23,22 @@ public partial class MainWindowViewModel : ViewModelBase
     }
 
     [ObservableProperty]
-    public partial bool ShowSettingsPage { get; set; } = true;
+    public partial bool ShowSettingsPage { get; set; } 
+
+    [ObservableProperty]
+    public partial bool ShowSearchPage { get; set; } = true;
+
+    [RelayCommand]
+    void SelectSearchPage()
+    {
+        ShowSearchPage = true;
+        ShowSettingsPage = false;
+    }
 
     [RelayCommand]
     void SelectSettingsPage()
     {
+        ShowSearchPage = false;
         ShowSettingsPage = true;
     }
 
