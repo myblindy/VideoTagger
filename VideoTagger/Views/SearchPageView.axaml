@@ -1,21 +1,47 @@
-<UserControl 
-	xmlns="https://github.com/avaloniaui"
-  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-  xmlns:vm="using:VideoTagger.ViewModels"
-	xmlns:fctls="using:FluentAvalonia.UI.Controls"
-	xmlns:ctls="using:VideoTagger.Controls"
-	xmlns:models="using:VideoTagger.Models"
-	x:Class="VideoTagger.Views.SearchPageView"
-	x:DataType="vm:SearchPageViewModel">
+<UserControl xmlns="https://github.com/avaloniaui"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 xmlns:vm="using:VideoTagger.ViewModels"
+			 xmlns:fctls="using:FluentAvalonia.UI.Controls"
+			 xmlns:ctls="using:VideoTagger.Controls"
+			 xmlns:models="using:VideoTagger.Models"
+			 x:Class="VideoTagger.Views.SearchPageView"
+			 x:DataType="vm:SearchPageViewModel">
 	<Grid>
-		<ItemsControl ItemsSource="{Binding MemberSearchItems}">
+		<ItemsControl ItemsSource="{Binding SearchCategoryItems}">
+			<ItemsControl.ItemsPanel>
+				<ItemsPanelTemplate>
+					<VirtualizingStackPanel Orientation="Vertical"/>
+				</ItemsPanelTemplate>
+			</ItemsControl.ItemsPanel>
 			<ItemsControl.ItemTemplate>
 				<DataTemplate>
-					<TextBlock>
-						<Run Text="{Binding Group.Name}"/> - <Run Text="{Binding Member.Name}"/>
-					</TextBlock>
+					<Border Background="{DynamicResource SolidBackgroundFillColorSecondary}">
+						<Grid ColumnDefinitions="200, *" ColumnSpacing="10">
+							<Border Background="{DynamicResource SolidBackgroundFillColorTertiary}"
+									CornerRadius="10" Margin="10">
+								<TextBlock Text="{Binding CategoryName}" Margin="10" TextWrapping="Wrap"
+										   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+							</Border>
+
+							<Panel Grid.Column="1" VerticalAlignment="Center">
+								<ItemsControl ItemsSource="{Binding Items}">
+									<ItemsControl.ItemsPanel>
+										<ItemsPanelTemplate>
+											<WrapPanel Orientation="Horizontal" ItemSpacing="5"/>
+										</ItemsPanelTemplate>
+									</ItemsControl.ItemsPanel>
+									<ItemsControl.ItemTemplate>
+										<DataTemplate>
+											<ToggleButton Content="{Binding ItemName}"/>
+										</DataTemplate>
+									</ItemsControl.ItemTemplate>
+								</ItemsControl>
+							</Panel>
+						</Grid>
+					</Border>
+
 				</DataTemplate>
 			</ItemsControl.ItemTemplate>
 		</ItemsControl>

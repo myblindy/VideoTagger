@@ -9,12 +9,12 @@ namespace VideoTagger.Helpers;
 
 public static class LiteDBHelpers
 {
-    private static readonly Dictionary<Type, List<(Type PropertyType, string MemberName, bool IsList)>> _mapper = [];
+    private static readonly Dictionary<Type, List<(Type PropertyType, string MemberName, bool IsList)>> mapper = [];
 
     static void AddMapping<T, U>(string memberName, bool isList)
     {
-        if (!_mapper.TryGetValue(typeof(T), out var list))
-            _mapper[typeof(T)] = list = [];
+        if (!mapper.TryGetValue(typeof(T), out var list))
+            mapper[typeof(T)] = list = [];
         list.Add((typeof(U), memberName, isList));
     }
 
@@ -38,12 +38,12 @@ public static class LiteDBHelpers
     {
         public ILiteCollection<T> IncludeAll()
         {
-            if (!_mapper.ContainsKey(typeof(T)))
+            if (!mapper.ContainsKey(typeof(T)))
                 return col;
 
             List<string> GetIncludes(Type t, bool first)
             {
-                if (_mapper.TryGetValue(t, out var values))
+                if (mapper.TryGetValue(t, out var values))
                 {
                     List<string> includes = [];
                     foreach (var (propertyType, memberName, isList) in values)

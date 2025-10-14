@@ -8,10 +8,10 @@ namespace VideoTagger.Models;
 
 public sealed partial class MainModel : ObservableObject
 {
-    public ObservableCollection<MainModelCategory> Categories { get; } = [];
-    public ObservableCollection<MainModelFolder> Folders { get; } = [];
-    public ObservableCollection<MainModelGroup> Groups { get; } = [];
-    public ObservableCollection<MainModelVideoCache> VideoCache { get; } = [];
+    public ObservableCollectionExtended<MainModelCategory> Categories { get; } = [];
+    public ObservableCollectionExtended<MainModelFolder> Folders { get; } = [];
+    public ObservableCollectionExtended<MainModelGroup> Groups { get; } = [];
+    public ObservableCollectionExtended<MainModelVideoCache> VideoCache { get; } = [];
 }
 
 public sealed partial class MainModelVideoCache : ObservableObject
@@ -29,7 +29,7 @@ public sealed partial class MainModelVideoCache : ObservableObject
     public partial string? CoverImageFileName { get; set; }
 
     [ObservableProperty]
-    public partial ObservableCollection<MainModelVideoCacheTag> Tags { get; set; } = [];
+    public partial ObservableCollectionExtended<MainModelVideoCacheTag> Tags { get; set; } = [];
 }
 
 public sealed partial class MainModelVideoCacheTag : ObservableObject
@@ -43,7 +43,7 @@ public sealed partial class MainModelVideoCacheTag : ObservableObject
     public partial MainModelGroupMember? Member { get; set; }
 
     [ObservableProperty]
-    public partial ObservableCollection<MainModelVideoCacheTagItem> Items { get; set; } = [];
+    public partial ObservableCollectionExtended<MainModelVideoCacheTagItem> Items { get; set; } = [];
 }
 
 public sealed partial class MainModelVideoCacheTagItem : ObservableObject
@@ -74,7 +74,7 @@ public sealed partial class MainModelCategory : ObservableObject
 
     [ObservableProperty]
     [BsonRef]
-    public partial ObservableCollection<MainModelCategoryItem> Items { get; set; } = [];
+    public partial ObservableCollectionExtended<MainModelCategoryItem> Items { get; set; } = [];
 }
 
 public sealed partial class MainModelCategoryItem : ObservableObject
@@ -93,7 +93,7 @@ public sealed partial class MainModelCategoryItem : ObservableObject
 
     [ObservableProperty]
     [BsonRef]
-    public partial ObservableCollection<MainModelCategoryItemEnumValue> EnumValues { get; set; } = [];
+    public partial ObservableCollectionExtended<MainModelCategoryItemEnumValue> EnumValues { get; set; } = [];
 }
 
 public sealed partial class MainModelCategoryItemEnumValue : ObservableObject
@@ -126,11 +126,11 @@ public sealed partial class MainModelGroup : ObservableObject
     public partial string Name { get; set; }
 
     [ObservableProperty]
-    public partial ObservableCollection<MainModelGroupAlternativeName> AlternativeNames { get; set; } = [];
+    public partial ObservableCollectionExtended<MainModelGroupAlternativeName> AlternativeNames { get; set; } = [];
 
     [ObservableProperty]
     [BsonRef]
-    public partial ObservableCollection<MainModelGroupMember> Members { get; set; } = [];
+    public partial ObservableCollectionExtended<MainModelGroupMember> Members { get; set; } = [];
 }
 
 public sealed partial class MainModelGroupMember : ObservableObject
@@ -146,7 +146,7 @@ public sealed partial class MainModelGroupMember : ObservableObject
     public partial string Name { get; set; }
 
     [ObservableProperty]
-    public partial ObservableCollection<MainModelGroupMemberAlternativeName> AlternativeNames { get; set; } = [];
+    public partial ObservableCollectionExtended<MainModelGroupMemberAlternativeName> AlternativeNames { get; set; } = [];
 }
 
 public sealed partial class MainModelGroupAlternativeName : ObservableObject
