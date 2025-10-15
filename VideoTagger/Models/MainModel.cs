@@ -1,6 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using DynamicData.Binding;
-using LiteDB;
 using System;
 using System.Collections.ObjectModel;
 
@@ -16,9 +15,6 @@ public sealed partial class MainModel : ObservableObject
 
 public sealed partial class MainModelVideoCache : ObservableObject
 {
-    [BsonId]
-    public int Id { get; set; }
-
     [ObservableProperty]
     public partial string Path { get; set; }
 

@@ -1,6 +1,4 @@
-﻿using Avalonia.Controls.Templates;
-using CommunityToolkit.Mvvm.ComponentModel;
-using LiteDB;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Concurrent;
@@ -15,14 +13,6 @@ namespace VideoTagger.Services;
 
 public sealed class DbService : ObservableObject
 {
-    readonly ILiteDatabase db;
-    readonly ILiteCollection<MainModelCategory> categoriesCollection;
-    readonly ILiteCollection<MainModelFolder> foldersCollection;
-    readonly ILiteCollection<MainModelGroup> groupsCollection;
-    readonly ILiteCollection<MainModelGroupMember> groupMembersCollection;
-    readonly ILiteCollection<MainModelVideoCache> videoCacheCollection;
-    readonly ILiteCollection<MainModelCategoryItem> categoryItemsCollection;
-    readonly ILiteCollection<MainModelCategoryItemEnumValue> categoryItemEnumValuesCollection;
 
     class MiscInternal
     {

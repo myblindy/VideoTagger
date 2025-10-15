@@ -3,7 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Dialogs;
 using FluentAvalonia.UI.Windowing;
-using LiteDB;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Simple.Avalonia.Hosting;
@@ -18,17 +18,13 @@ using VideoTagger.Views;
 
 var dbPath = Path.Combine(
     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-    "VideoTagger", "videotagger.db");
+    "VideoTagger", "VideoTagger.db");
 Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
 
 var builder = Host.CreateApplicationBuilder(args);
 builder.Services
-    .AddSingleton<ILiteDatabase, LiteDatabase>(_ => new LiteDatabase(new ConnectionString(dbPath)
-    {
-        AutoRebuild = true,
-        Connection = ConnectionType.Shared,
-        Upgrade = true
-    }))
+    .AddDbContextPool<DbModel>(options => options
+        .UseSqlite($"Data Source={dbPath}"))
 
     .AddDbService()
     .AddDialogService()
