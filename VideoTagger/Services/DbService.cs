@@ -46,6 +46,7 @@ public sealed class DbService : ObservableObject
         LiteDBHelpers.Register<MainModelCategory, MainModelCategoryItem>(w => w.Items);
         LiteDBHelpers.Register<MainModelCategoryItem, MainModelCategoryItemEnumValue>(w => w.EnumValues);
         LiteDBHelpers.Register<MainModelGroup, MainModelGroupMember>(w => w.Members);
+        LiteDBHelpers.Register<MainModelVideoCache, MainModelVideoCacheTag>(w => w.Tags);
         LiteDBHelpers.Register<MainModelVideoCacheTag, MainModelGroup>(w => w.Group);
         LiteDBHelpers.Register<MainModelVideoCacheTag, MainModelGroupMember>(w => w.Member);
         LiteDBHelpers.Register<MainModelVideoCacheTagItem, MainModelCategory>(w => w.Category);

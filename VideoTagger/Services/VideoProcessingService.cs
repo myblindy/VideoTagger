@@ -98,13 +98,13 @@ public sealed partial class VideoProcessingService(
                 Dictionary<MainModelGroupMember, Dictionary<(MainModelCategory category, MainModelCategoryItem item), object>> tags = [];
                 foreach (var (member, @string) in memberStrings)
                 {
+                    tags.TryAdd(member, []);
                     foreach (var category in mainModel.Categories)
                         foreach (var categoryItem in category.Items)
                             if (categoryItem.IsBoolean)
                             {
                                 if (Regex.IsMatch(@string, categoryItem.BooleanRegex ?? @$"\b{Regex.Escape(categoryItem.Name)}\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
                                 {
-                                    tags.TryAdd(member, []);
                                     tags[member][(category, categoryItem)] = true;
                                     break;
                                 }
@@ -116,7 +116,6 @@ public sealed partial class VideoProcessingService(
                                     if (enumValue.Regex is not null
                                         && Regex.IsMatch(@string, enumValue.Regex, RegexOptions.IgnoreCase))
                                     {
-                                        tags.TryAdd(member, []);
                                         tags[member][(category, categoryItem)] = enumValue;
                                         break;
                                     }

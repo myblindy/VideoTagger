@@ -7,43 +7,55 @@
 			 xmlns:ctls="using:VideoTagger.Controls"
 			 xmlns:models="using:VideoTagger.Models"
 			 x:Class="VideoTagger.Views.SearchPageView"
+			 x:Name="RootView"
 			 x:DataType="vm:SearchPageViewModel">
-	<Grid>
-		<ItemsControl ItemsSource="{Binding SearchCategoryItems}">
-			<ItemsControl.ItemsPanel>
-				<ItemsPanelTemplate>
-					<VirtualizingStackPanel Orientation="Vertical"/>
-				</ItemsPanelTemplate>
-			</ItemsControl.ItemsPanel>
-			<ItemsControl.ItemTemplate>
+	<Grid RowDefinitions="1*, 3*">
+		<ScrollViewer>
+			<ItemsControl ItemsSource="{Binding SearchCategoryItems}">
+				<ItemsControl.ItemsPanel>
+					<ItemsPanelTemplate>
+						<VirtualizingStackPanel Orientation="Vertical"/>
+					</ItemsPanelTemplate>
+				</ItemsControl.ItemsPanel>
+				<ItemsControl.ItemTemplate>
+					<DataTemplate>
+						<Border Background="{DynamicResource SolidBackgroundFillColorSecondary}">
+							<Grid ColumnDefinitions="200, *" ColumnSpacing="10">
+								<Border Background="{DynamicResource SolidBackgroundFillColorTertiary}"
+										CornerRadius="10" Margin="10">
+									<TextBlock Text="{Binding CategoryName}" Margin="10" TextWrapping="Wrap"
+											   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+								</Border>
+
+								<Panel Grid.Column="1" VerticalAlignment="Center">
+									<ItemsControl ItemsSource="{Binding Items}">
+										<ItemsControl.ItemsPanel>
+											<ItemsPanelTemplate>
+												<WrapPanel Orientation="Horizontal" ItemSpacing="5"/>
+											</ItemsPanelTemplate>
+										</ItemsControl.ItemsPanel>
+										<ItemsControl.ItemTemplate>
+											<DataTemplate>
+												<ToggleButton Content="{Binding ItemName}"
+															  IsChecked="{Binding IsSelected}"
+															  Command="{Binding #RootView.DataContext.SearchCommand}"/>
+											</DataTemplate>
+										</ItemsControl.ItemTemplate>
+									</ItemsControl>
+								</Panel>
+							</Grid>
+						</Border>
+					</DataTemplate>
+				</ItemsControl.ItemTemplate>
+			</ItemsControl>
+		</ScrollViewer>
+
+		<ListBox Grid.Row="1" ItemsSource="{Binding SearchResults}">
+			<ListBox.ItemTemplate>
 				<DataTemplate>
-					<Border Background="{DynamicResource SolidBackgroundFillColorSecondary}">
-						<Grid ColumnDefinitions="200, *" ColumnSpacing="10">
-							<Border Background="{DynamicResource SolidBackgroundFillColorTertiary}"
-									CornerRadius="10" Margin="10">
-								<TextBlock Text="{Binding CategoryName}" Margin="10" TextWrapping="Wrap"
-										   HorizontalAlignment="Center" VerticalAlignment="Center"/>
-							</Border>
-
-							<Panel Grid.Column="1" VerticalAlignment="Center">
-								<ItemsControl ItemsSource="{Binding Items}">
-									<ItemsControl.ItemsPanel>
-										<ItemsPanelTemplate>
-											<WrapPanel Orientation="Horizontal" ItemSpacing="5"/>
-										</ItemsPanelTemplate>
-									</ItemsControl.ItemsPanel>
-									<ItemsControl.ItemTemplate>
-										<DataTemplate>
-											<ToggleButton Content="{Binding ItemName}"/>
-										</DataTemplate>
-									</ItemsControl.ItemTemplate>
-								</ItemsControl>
-							</Panel>
-						</Grid>
-					</Border>
-
+					<TextBlock Text="{Binding Path}" TextWrapping="Wrap"/>
 				</DataTemplate>
-			</ItemsControl.ItemTemplate>
-		</ItemsControl>
+			</ListBox.ItemTemplate>
+		</ListBox>
 	</Grid>
 </UserControl>

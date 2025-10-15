@@ -1,10 +1,17 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using DynamicData;
 using DynamicData.Binding;
+using Microsoft.Extensions.Logging;
 using ReactiveUI;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.Diagnostics.Contracts;
+using System.Linq;
+using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using VideoTagger.Models;
 
 namespace VideoTagger.ViewModels;
@@ -13,6 +20,10 @@ public sealed partial class SearchPageViewModel : ViewModelBase
 {
     readonly ReadOnlyObservableCollection<SearchCategoryItem> searchCategoryItems;
     public ReadOnlyObservableCollection<SearchCategoryItem> SearchCategoryItems => searchCategoryItems;
+
+    readonly Subject<bool> searchRequestObservable = new();
+
+    public ObservableCollection<MainModelVideoCache> SearchResults { get; } = [];
 
     public SearchPageViewModel(MainModel mainModel)
     {
@@ -42,7 +53,39 @@ public sealed partial class SearchPageViewModel : ViewModelBase
                 ])
             .Bind(out searchCategoryItems)
             .Subscribe();
+
+        searchRequestObservable.Throttle(TimeSpan.FromSeconds(.5)).Subscribe(_ =>
+        {
+            SearchResults.Clear();
+
+            foreach (var videoCacheItem in mainModel.VideoCache)
+            {
+                foreach (var searchCategoryItem in SearchCategoryItems)
+                    foreach (var searchItem in searchCategoryItem.Items)
+                        if (searchItem.IsSelected)
+                            if (videoCacheItem.Tags.FirstOrDefault(t =>
+                                t.Group?.Name == searchCategoryItem.CategoryName
+                                && t.Member?.Name == searchItem.ItemName) is { } memberTag)
+                            {
+                                // found the group and member, check the other tags
+                                // TODO
+
+                            }
+                            else
+                                goto fail;
+
+                // success
+                SearchResults.Add(videoCacheItem);
+                continue;
+
+                fail:;
+            }
+        });
     }
+
+    [RelayCommand]
+    void Search() =>
+        searchRequestObservable.OnNext(true);
 }
 
 public partial class SearchItem(Func<string> itemNameGetter) : ObservableObject
