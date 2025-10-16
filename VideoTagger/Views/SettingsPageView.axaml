@@ -7,6 +7,7 @@
 	xmlns:fctls="using:FluentAvalonia.UI.Controls"
 	xmlns:ctls="using:VideoTagger.Controls"
 	xmlns:models="using:VideoTagger.Models"
+    xmlns:system="using:System"
 	mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
 	x:Class="VideoTagger.Views.SettingsPageView"
 	x:DataType="vm:SettingsPageViewModel"
@@ -59,7 +60,7 @@
 									</ItemsControl.ItemsPanel>
 									<ItemsControl.ItemTemplate>
 										<DataTemplate>
-											<TextBlock Text="{Binding Name}" FontSize="10"
+											<TextBlock Text="{Binding}" FontSize="10"
 																 Foreground="{DynamicResource SystemFillColorSolidNeutralBrush}"/>
 										</DataTemplate>
 									</ItemsControl.ItemTemplate>
@@ -81,8 +82,8 @@
 								IsMoveDownVisible="False" IsMoveUpVisible="False">
 
 								<ctls:EditableListBox.ItemTemplate>
-									<DataTemplate x:DataType="models:MainModelGroupAlternativeName">
-										<TextBlock Text="{Binding Name}"/>
+									<DataTemplate x:DataType="system:String">
+										<TextBlock Text="{Binding}"/>
 									</DataTemplate>
 								</ctls:EditableListBox.ItemTemplate>
 							</ctls:EditableListBox>

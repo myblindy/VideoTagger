@@ -23,7 +23,7 @@ public sealed partial class SearchPageViewModel : ViewModelBase
 
     readonly Subject<bool> searchRequestObservable = new();
 
-    public ObservableCollection<MainModelVideoCache> SearchResults { get; } = [];
+    public ObservableCollection<MainModelVideoCacheEntry> SearchResults { get; } = [];
 
     public SearchPageViewModel(MainModel mainModel)
     {
@@ -64,7 +64,7 @@ public sealed partial class SearchPageViewModel : ViewModelBase
                     foreach (var searchItem in searchCategoryItem.Items)
                         if (searchItem.IsSelected)
                             if (videoCacheItem.Tags.FirstOrDefault(t =>
-                                t.Group?.Name == searchCategoryItem.CategoryName
+                                t?.Member?.Group?.Name == searchCategoryItem.CategoryName
                                 && t.Member?.Name == searchItem.ItemName) is { } memberTag)
                             {
                                 // found the group and member, check the other tags

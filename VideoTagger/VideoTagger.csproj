@@ -31,8 +31,10 @@
 		<PackageReference Include="FFmpeg.Loader" Version="3.0.2" />
 		<PackageReference Include="FluentAvaloniaUI" Version="2.4.0" />
 		<PackageReference Include="LibMpv.Avalonia" Version="1.0.0" />
+		<PackageReference Include="Microsoft.Build.Tasks.Core" Version="17.14.28" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Analyzers" Version="10.0.0-rc.2.25502.107" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.0-rc.2.25502.107" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0-rc.2.25502.107" />
 		<PackageReference Include="Nito.AsyncEx.Coordination" Version="5.1.2" />
 		<PackageReference Include="ReactiveUI.Avalonia" Version="11.3.0" />
 		<PackageReference Include="Simple.Avalonia.Hosting" Version="8.5.0" />

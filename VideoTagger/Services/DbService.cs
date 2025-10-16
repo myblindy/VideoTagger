@@ -1,4 +1,6 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using AutoMapper;
+using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Concurrent;
@@ -13,157 +15,146 @@ namespace VideoTagger.Services;
 
 public sealed class DbService : ObservableObject
 {
+    readonly IDbContextFactory<DbModel> dbFactory;
+    readonly IMapper mapper;
 
-    class MiscInternal
+    public DbService(IDbContextFactory<DbModel> dbFactory, IMapper mapper)
     {
-        public int Id { get; set; }
-        public bool IsDirty { get; set; }
+        this.dbFactory = dbFactory;
+        this.mapper = mapper;
+        using (var db = dbFactory.CreateDbContext())
+            db.Database.Migrate();
+
+        IsDirty = DbMisc.IsDirty;
     }
-    readonly ILiteCollection<MiscInternal> miscInternalCollection;
 
-    public DbService(ILiteDatabase db)
+    DbMisc DbMisc
     {
-        this.db = db;
-        categoriesCollection = db.GetCollection<MainModelCategory>();
-        foldersCollection = db.GetCollection<MainModelFolder>();
-        groupsCollection = db.GetCollection<MainModelGroup>();
-        miscInternalCollection = db.GetCollection<MiscInternal>();
-        groupMembersCollection = db.GetCollection<MainModelGroupMember>();
-        videoCacheCollection = db.GetCollection<MainModelVideoCache>();
-        categoryItemsCollection = db.GetCollection<MainModelCategoryItem>();
-        categoryItemEnumValuesCollection = db.GetCollection<MainModelCategoryItemEnumValue>();
-
-        LiteDBHelpers.Register<MainModelCategory, MainModelCategoryItem>(w => w.Items);
-        LiteDBHelpers.Register<MainModelCategoryItem, MainModelCategoryItemEnumValue>(w => w.EnumValues);
-        LiteDBHelpers.Register<MainModelGroup, MainModelGroupMember>(w => w.Members);
-        LiteDBHelpers.Register<MainModelVideoCache, MainModelVideoCacheTag>(w => w.Tags);
-        LiteDBHelpers.Register<MainModelVideoCacheTag, MainModelGroup>(w => w.Group);
-        LiteDBHelpers.Register<MainModelVideoCacheTag, MainModelGroupMember>(w => w.Member);
-        LiteDBHelpers.Register<MainModelVideoCacheTagItem, MainModelCategory>(w => w.Category);
-        LiteDBHelpers.Register<MainModelVideoCacheTagItem, MainModelCategoryItem>(w => w.Item);
-        LiteDBHelpers.Register<MainModelVideoCacheTagItem, MainModelCategoryItemEnumValue>(w => w.EnumValue);
-
-        // misc properties
-        if (miscInternalCollection.FindAll().FirstOrDefault() is { } misc)
+        get
         {
-            IsDirty = misc.IsDirty;
+            using var db = dbFactory.CreateDbContext();
+            if (db.Set<DbMisc>().FirstOrDefault() is not { } misc)
+            {
+                misc = new()
+                {
+                    DatabaseVersion = DbMisc.CurrentDatabaseVersion,
+                    IsDirty = false
+                };
+                db.Set<DbMisc>().Add(misc);
+                db.SaveChanges();
+            }
+            return misc;
         }
     }
 
-    public void FillMainModel(MainModel mainModel)
+    public async Task FillMainModel(MainModel mainModel)
     {
+        using var db = dbFactory.CreateDbContext();
+
         mainModel.Categories.Clear();
-        mainModel.Categories.AddRange(categoriesCollection
-            .IncludeAll()
-            .FindAll());
+        mainModel.Categories.AddRange(mapper.Map<List<DbModelCategory>, List<MainModelCategory>>(
+            await db.Categories.Include(c => c.Items).ThenInclude(i => i.EnumValues)
+                .ToListAsync()));
 
         mainModel.Folders.Clear();
-        mainModel.Folders.AddRange(foldersCollection
-            .FindAll());
+        mainModel.Folders.AddRange(mapper.Map<List<DbModelFolder>, List<MainModelFolder>>(
+            await db.Folders.ToListAsync()));
 
         mainModel.Groups.Clear();
-        mainModel.Groups.AddRange(groupsCollection
-            .IncludeAll()
-            .FindAll());
+        mainModel.Groups.AddRange(mapper.Map<List<DbModelGroup>, List<MainModelGroup>>(
+            await db.Groups.Include(g => g.Members)
+                .ToListAsync()));
 
         mainModel.VideoCache.Clear();
-        mainModel.VideoCache.AddRange(videoCacheCollection
-            .IncludeAll()
-            .FindAll());
+        mainModel.VideoCache.AddRange(mapper.Map<List<DbModelVideoCacheEntry>, List<MainModelVideoCacheEntry>>(
+            await db.VideoCacheEntries.Include(v => v.Tags).ThenInclude(t => t.Items)//.ThenInclude(i => i.CategoryItem)
+                .Include(v => v.Tags).ThenInclude(t => t.Items).ThenInclude(i => i.EnumValue)
+                .Include(v => v.Tags).ThenInclude(t => t.Member)
+                .ToListAsync()));
 
         foreach (var group in mainModel.Groups)
             foreach (var member in group.Members)
                 member.Group = group;
     }
 
-    public void WriteMainModel(MainModel mainModel)
+    public async Task WriteMainModel(MainModel mainModel)
     {
-        categoryItemEnumValuesCollection.DeleteAll();
-        foreach (var enumValue in mainModel.Categories.SelectMany(x => x.Items.SelectMany(i => i.EnumValues))
-            .Union(mainModel.VideoCache.SelectMany(v => v.Tags.SelectMany(t => t.Items.Select(i => i.EnumValue))))
-            .Where(w => w is not null))
-        {
-            enumValue!.Id = 0;
-            categoryItemEnumValuesCollection.Insert(enumValue);
-        }
+        using var db = dbFactory.CreateDbContext();
 
-        categoryItemsCollection.DeleteAll();
-        foreach (var item in mainModel.Categories.SelectMany(x => x.Items)
-            .Union(mainModel.VideoCache.SelectMany(x => x.Tags.SelectMany(t => t.Items.Select(i => i.Item)))))
-        {
-            item!.Id = 0;
-            categoryItemsCollection.Insert(item);
-        }
+        db.CategoryItemEnumValues.RemoveRange(
+            await db.CategoryItemEnumValues.ToListAsync().ConfigureAwait(false));
+        db.CategoryItems.RemoveRange(
+            await db.CategoryItems.ToListAsync().ConfigureAwait(false));
+        db.Categories.RemoveRange(
+            await db.Categories.ToListAsync().ConfigureAwait(false));
+        db.Categories.AddRange(mapper.Map<IList<MainModelCategory>, IList<DbModelCategory>>(
+            mainModel.Categories));
 
-        categoriesCollection.DeleteAll();
-        categoriesCollection.InsertBulk(mainModel.Categories);
+        db.Folders.RemoveRange(
+            await db.Folders.ToListAsync().ConfigureAwait(false));
+        db.Folders.AddRange(mapper.Map<IList<MainModelFolder>, IList<DbModelFolder>>(
+            mainModel.Folders));
 
-        foldersCollection.DeleteAll();
-        foldersCollection.InsertBulk(mainModel.Folders);
+        db.GroupMembers.RemoveRange(
+            await db.GroupMembers.ToListAsync().ConfigureAwait(false));
+        db.Groups.RemoveRange(
+            await db.Groups.ToListAsync().ConfigureAwait(false));
+        db.Groups.AddRange(mapper.Map<IList<MainModelGroup>, IList<DbModelGroup>>(
+            mainModel.Groups));
 
-        groupMembersCollection.DeleteAll();
-        foreach (var member in mainModel.Groups.SelectMany(x => x.Members)
-            .Union(mainModel.VideoCache.SelectMany(x => x.Tags.SelectMany(t => t.Group!.Members))))
-        {
-            member.Id = 0;
-            groupMembersCollection.Insert(member);
-        }
-
-        groupsCollection.DeleteAll();
-        groupsCollection.Insert(mainModel.Groups);
-
-        videoCacheCollection.DeleteAll();
-        videoCacheCollection.Insert(mainModel.VideoCache);
+        //videoCacheCollection.DeleteAll();
+        //videoCacheCollection.Insert(mainModel.VideoCache);
 
         IsDirty = true;
     }
 
-    readonly ConcurrentBag<(MainModelVideoCache entry, Func<byte[]?>? coverImageBytesGetter, bool forceCoverImageUpdate)> videoCacheEntryUpdates = [];
-    public void QueueVideoCacheEntryUpdate(MainModelVideoCache entry, Func<byte[]?>? coverImageBytesGetter = null, bool forceCoverImageUpdate = false) =>
+    readonly ConcurrentBag<(MainModelVideoCacheEntry entry, Func<byte[]?>? coverImageBytesGetter, bool forceCoverImageUpdate)> videoCacheEntryUpdates = [];
+
+    public void QueueVideoCacheEntryUpdate(MainModelVideoCacheEntry entry, Func<byte[]?>? coverImageBytesGetter = null, bool forceCoverImageUpdate = false) =>
         videoCacheEntryUpdates.Add((entry, coverImageBytesGetter, forceCoverImageUpdate));
 
     public async Task CommitVideoCacheEntryUpdatesAsync()
     {
-        var allExistingEntries = videoCacheCollection.FindAll().ToDictionary(x => x.Path, x => x);
-        List<MainModelVideoCache> updates = [], inserts = [];
-        List<Task> coverImageWriteTasks = [];
+        //var allExistingEntries = videoCacheCollection.FindAll().ToDictionary(x => x.Path, x => x);
+        //List<MainModelVideoCacheEntry> updates = [], inserts = [];
+        //List<Task> coverImageWriteTasks = [];
 
-        foreach (var (entry, coverImageBytesGetter, forceCoverImageUpdate) in videoCacheEntryUpdates)
-        {
-            void HandleCoverImageFile(MainModelVideoCache? existingEntry)
-            {
-                if ((forceCoverImageUpdate || existingEntry?.CoverImageFileName is null) && coverImageBytesGetter?.Invoke() is { } imageBytes)
-                {
-                    entry.CoverImageFileName ??= existingEntry?.CoverImageFileName
-                        ?? Guid.NewGuid().ToString("N") + ".jpg";
-                    db.FileStorage.Upload(entry.CoverImageFileName, entry.CoverImageFileName, new MemoryStream(imageBytes));
-                }
-                else if ((forceCoverImageUpdate || existingEntry?.CoverImageFileName is not null) && coverImageBytesGetter is null)
-                {
-                    if (existingEntry?.CoverImageFileName is { } existingCoverImageFileName)
-                        db.FileStorage.Delete(existingCoverImageFileName);
-                    entry.CoverImageFileName = null;
-                }
-                else
-                    entry.CoverImageFileName = existingEntry?.CoverImageFileName;
-            }
+        //foreach (var (entry, coverImageBytesGetter, forceCoverImageUpdate) in videoCacheEntryUpdates)
+        //{
+        //    void HandleCoverImageFile(MainModelVideoCacheEntry? existingEntry)
+        //    {
+        //        if ((forceCoverImageUpdate || existingEntry?.CoverImageFileName is null) && coverImageBytesGetter?.Invoke() is { } imageBytes)
+        //        {
+        //            entry.CoverImageFileName ??= existingEntry?.CoverImageFileName
+        //                ?? Guid.NewGuid().ToString("N") + ".jpg";
+        //            db.FileStorage.Upload(entry.CoverImageFileName, entry.CoverImageFileName, new MemoryStream(imageBytes));
+        //        }
+        //        else if ((forceCoverImageUpdate || existingEntry?.CoverImageFileName is not null) && coverImageBytesGetter is null)
+        //        {
+        //            if (existingEntry?.CoverImageFileName is { } existingCoverImageFileName)
+        //                db.FileStorage.Delete(existingCoverImageFileName);
+        //            entry.CoverImageFileName = null;
+        //        }
+        //        else
+        //            entry.CoverImageFileName = existingEntry?.CoverImageFileName;
+        //    }
 
-            if (allExistingEntries.TryGetValue(entry.Path, out var existingEntry))
-            {
-                entry.Id = existingEntry.Id;
-                coverImageWriteTasks.Add(Task.Run(() => HandleCoverImageFile(existingEntry)));
-                updates.Add(entry);
-            }
-            else
-            {
-                coverImageWriteTasks.Add(Task.Run(() => HandleCoverImageFile(null)));
-                inserts.Add(entry);
-            }
-        }
+        //    if (allExistingEntries.TryGetValue(entry.Path, out var existingEntry))
+        //    {
+        //        entry.Id = existingEntry.Id;
+        //        coverImageWriteTasks.Add(Task.Run(() => HandleCoverImageFile(existingEntry)));
+        //        updates.Add(entry);
+        //    }
+        //    else
+        //    {
+        //        coverImageWriteTasks.Add(Task.Run(() => HandleCoverImageFile(null)));
+        //        inserts.Add(entry);
+        //    }
+        //}
 
-        await Task.WhenAll(coverImageWriteTasks).ConfigureAwait(false);
-        videoCacheCollection.InsertBulk(inserts);
-        videoCacheCollection.Update(updates);
+        //await Task.WhenAll(coverImageWriteTasks).ConfigureAwait(false);
+        //videoCacheCollection.InsertBulk(inserts);
+        //videoCacheCollection.Update(updates);
 
         videoCacheEntryUpdates.Clear();
         IsDirty = false;
@@ -175,10 +166,12 @@ public sealed class DbService : ObservableObject
         set
         {
             SetProperty(ref field, value);
-            if (miscInternalCollection.FindAll().FirstOrDefault() is not { } misc)
-                misc = new();
+
+            using var db = dbFactory.CreateDbContext();
+            var misc = DbMisc;
+            db.Attach(misc);
             misc.IsDirty = value;
-            miscInternalCollection.Upsert(misc);
+            db.SaveChanges();
         }
     }
 }

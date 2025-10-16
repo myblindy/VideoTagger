@@ -1,7 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using DynamicData.Binding;
 using System;
-using System.Collections.ObjectModel;
 
 namespace VideoTagger.Models;
 
@@ -10,10 +9,10 @@ public sealed partial class MainModel : ObservableObject
     public ObservableCollectionExtended<MainModelCategory> Categories { get; } = [];
     public ObservableCollectionExtended<MainModelFolder> Folders { get; } = [];
     public ObservableCollectionExtended<MainModelGroup> Groups { get; } = [];
-    public ObservableCollectionExtended<MainModelVideoCache> VideoCache { get; } = [];
+    public ObservableCollectionExtended<MainModelVideoCacheEntry> VideoCache { get; } = [];
 }
 
-public sealed partial class MainModelVideoCache : ObservableObject
+public sealed partial class MainModelVideoCacheEntry : ObservableObject
 {
     [ObservableProperty]
     public partial string Path { get; set; }
@@ -21,21 +20,12 @@ public sealed partial class MainModelVideoCache : ObservableObject
     [ObservableProperty]
     public partial DateTime Date { get; set; }
 
-    [ObservableProperty]
-    public partial string? CoverImageFileName { get; set; }
-
-    [ObservableProperty]
-    public partial ObservableCollectionExtended<MainModelVideoCacheTag> Tags { get; set; } = [];
+    public ObservableCollectionExtended<MainModelVideoCacheTag> Tags { get; } = [];
 }
 
 public sealed partial class MainModelVideoCacheTag : ObservableObject
 {
     [ObservableProperty]
-    [BsonRef]
-    public partial MainModelGroup? Group { get; set; }
-
-    [ObservableProperty]
-    [BsonRef]
     public partial MainModelGroupMember? Member { get; set; }
 
     [ObservableProperty]
@@ -45,39 +35,25 @@ public sealed partial class MainModelVideoCacheTag : ObservableObject
 public sealed partial class MainModelVideoCacheTagItem : ObservableObject
 {
     [ObservableProperty]
-    [BsonRef]
-    public partial MainModelCategory? Category { get; set; }
-
-    [ObservableProperty]
-    [BsonRef]
-    public partial MainModelCategoryItem? Item { get; set; }
+    public partial MainModelCategoryItem? CategoryItem { get; set; }
 
     [ObservableProperty]
     public partial bool BooleanValue { get; set; }
 
     [ObservableProperty]
-    [BsonRef]
     public partial MainModelCategoryItemEnumValue? EnumValue { get; set; }
 }
 
 public sealed partial class MainModelCategory : ObservableObject
 {
     [ObservableProperty]
-    public partial int Id { get; set; }
-
-    [ObservableProperty]
     public partial string Name { get; set; }
 
-    [ObservableProperty]
-    [BsonRef]
-    public partial ObservableCollectionExtended<MainModelCategoryItem> Items { get; set; } = [];
+    public ObservableCollectionExtended<MainModelCategoryItem> Items { get; } = [];
 }
 
 public sealed partial class MainModelCategoryItem : ObservableObject
 {
-    [BsonId]
-    public int Id { get; set; }
-
     [ObservableProperty]
     public partial string Name { get; set; }
 
@@ -87,18 +63,13 @@ public sealed partial class MainModelCategoryItem : ObservableObject
     [ObservableProperty]
     public partial string? BooleanRegex { get; set; }
 
-    [ObservableProperty]
-    [BsonRef]
-    public partial ObservableCollectionExtended<MainModelCategoryItemEnumValue> EnumValues { get; set; } = [];
+    public ObservableCollectionExtended<MainModelCategoryItemEnumValue> EnumValues { get; } = [];
 }
 
 public sealed partial class MainModelCategoryItemEnumValue : ObservableObject
 {
-    [BsonId]
-    public int Id { get; set; }
-
     [ObservableProperty]
-    public partial string EnumValue { get; set; }
+    public partial string EnumValue { get; set; } = "";
 
     [ObservableProperty]
     public partial string? Regex { get; set; }
@@ -106,53 +77,30 @@ public sealed partial class MainModelCategoryItemEnumValue : ObservableObject
 
 public sealed partial class MainModelFolder : ObservableObject
 {
-    [BsonId]
-    public int Id { get; set; }
-
     [ObservableProperty]
     public partial string Path { get; set; }
 }
 
 public sealed partial class MainModelGroup : ObservableObject
 {
-    [BsonId]
-    public int Id { get; set; }
-
     [ObservableProperty]
     public partial string Name { get; set; }
 
     [ObservableProperty]
-    public partial ObservableCollectionExtended<MainModelGroupAlternativeName> AlternativeNames { get; set; } = [];
+    public partial ObservableCollectionExtended<string> AlternativeNames { get; set; } = [];
 
     [ObservableProperty]
-    [BsonRef]
     public partial ObservableCollectionExtended<MainModelGroupMember> Members { get; set; } = [];
 }
 
 public sealed partial class MainModelGroupMember : ObservableObject
 {
-    [BsonId]
-    public int Id { get; set; }
-
     [ObservableProperty]
-    [BsonIgnore]
     public partial MainModelGroup Group { get; set; } = null!;
 
     [ObservableProperty]
     public partial string Name { get; set; }
 
     [ObservableProperty]
-    public partial ObservableCollectionExtended<MainModelGroupMemberAlternativeName> AlternativeNames { get; set; } = [];
-}
-
-public sealed partial class MainModelGroupAlternativeName : ObservableObject
-{
-    [ObservableProperty]
-    public partial string Name { get; set; }
-}
-
-public sealed partial class MainModelGroupMemberAlternativeName : ObservableObject
-{
-    [ObservableProperty]
-    public partial string Name { get; set; }
+    public partial ObservableCollectionExtended<string> AlternativeNames { get; set; } = [];
 }

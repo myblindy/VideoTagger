@@ -19,11 +19,11 @@ public partial class MainWindowViewModel : ViewModelBase
     {
         this.videoProcessingService = videoProcessingService;
         DbService = dbService;
-        dbService.FillMainModel(mainModel);
+        _ = dbService.FillMainModel(mainModel);
     }
 
     [ObservableProperty]
-    public partial bool ShowSettingsPage { get; set; } 
+    public partial bool ShowSettingsPage { get; set; }
 
     [ObservableProperty]
     public partial bool ShowSearchPage { get; set; } = true;

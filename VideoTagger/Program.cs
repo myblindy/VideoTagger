@@ -10,7 +10,6 @@ using Simple.Avalonia.Hosting;
 using System;
 using System.IO;
 using VideoTagger;
-using VideoTagger.Helpers;
 using VideoTagger.Models;
 using VideoTagger.Services;
 using VideoTagger.ViewModels;
@@ -18,13 +17,16 @@ using VideoTagger.Views;
 
 var dbPath = Path.Combine(
     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-    "VideoTagger", "VideoTagger.db");
+    "VideoTagger", "VideoTagger.sqlite3");
 Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
+if(!File.Exists(dbPath))
+    File.Create(dbPath).Dispose();
 
 var builder = Host.CreateApplicationBuilder(args);
 builder.Services
-    .AddDbContextPool<DbModel>(options => options
-        .UseSqlite($"Data Source={dbPath}"))
+    .AddPooledDbContextFactory<DbModel>(options => options
+        .UseSqlite($"FileName={dbPath}"))
+    .AddAutoMapper(cfg => { }, typeof(MainModelMapperProfile))
 
     .AddDbService()
     .AddDialogService()

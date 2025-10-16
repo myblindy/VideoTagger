@@ -44,7 +44,7 @@ public sealed partial class VideoProcessingService(
 
         void ProcessVideo(string filePath)
         {
-            var result = new MainModelVideoCache { Path = filePath };
+            var result = new MainModelVideoCacheEntry { Path = filePath };
             Func<byte[]?>? coverImageBytes = null;
 
             try
@@ -63,7 +63,7 @@ public sealed partial class VideoProcessingService(
                 // group name
                 var group = mainModel.Groups.FirstOrDefault(g =>
                     g.Name.Equals(videoParts[2].ValueSpan, StringComparison.OrdinalIgnoreCase)
-                    || g.AlternativeNames.Any(an => an.Name.Equals(videoParts[2].ValueSpan, StringComparison.OrdinalIgnoreCase)));
+                    || g.AlternativeNames.Any(an => an.Equals(videoParts[2].ValueSpan, StringComparison.OrdinalIgnoreCase)));
 
                 if (group is null)
                 {
@@ -127,12 +127,10 @@ public sealed partial class VideoProcessingService(
                 foreach (var (member, memberTags) in tags)
                     result.Tags.Add(new MainModelVideoCacheTag
                     {
-                        Group = group,
                         Member = member,
                         Items = new(memberTags.Select(t => new MainModelVideoCacheTagItem
                         {
-                            Category = t.Key.category,
-                            Item = t.Key.item,
+                            CategoryItem = t.Key.item,
                             BooleanValue = t.Value is bool b && b,
                             EnumValue = t.Value as MainModelCategoryItemEnumValue
                         }))

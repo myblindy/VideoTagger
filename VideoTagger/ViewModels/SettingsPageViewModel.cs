@@ -2,6 +2,7 @@
 using CommunityToolkit.Mvvm.Input;
 using ReactiveUI;
 using System;
+using System.Formats.Asn1;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
@@ -30,9 +31,9 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
             MoveSelectedCategoryUpEnumValueCommand.NotifyCanExecuteChanged();
         });
 
-        this.WhenAnyValue(x => x.SelectedCategoryItem!.BooleanRegex, x => x.SelectedCategoryItemEnumValue!.Regex).Throttle(TimeSpan.FromSeconds(1)).Subscribe(_ =>
+        this.WhenAnyValue(x => x.SelectedCategoryItem!.BooleanRegex, x => x.SelectedCategoryItemEnumValue!.Regex).Throttle(TimeSpan.FromSeconds(1)).Subscribe(async _ =>
         {
-            dbService.WriteMainModel(MainModel);
+            await dbService.WriteMainModel(MainModel);
         });
     }
 
@@ -60,7 +61,7 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
             }
 
             if (anyChanged)
-                dbService.WriteMainModel(MainModel);
+                await dbService.WriteMainModel(MainModel);
         }
     }
 
@@ -72,7 +73,7 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
         if (await dialogService.Question("Remove Category", $"Are you sure you want to remove the category '{SelectedCategory.Name}'?"))
         {
             MainModel.Categories.Remove(SelectedCategory);
-            dbService.WriteMainModel(MainModel);
+            await dbService.WriteMainModel(MainModel);
             SelectedCategory = null;
         }
     }
@@ -81,7 +82,7 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
         SelectedCategory is not null;
 
     [RelayCommand(CanExecute = nameof(CanMoveSelectedCategoryUp))]
-    void MoveSelectedCategoryUp()
+    async Task MoveSelectedCategoryUp()
     {
         if (SelectedCategory is null) return;
 
@@ -91,7 +92,7 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
             var category = SelectedCategory;
             MainModel.Categories.RemoveAt(index);
             MainModel.Categories.Insert(index - 1, category);
-            dbService.WriteMainModel(MainModel);
+            await dbService.WriteMainModel(MainModel);
             SelectedCategory = category;
         }
     }
@@ -100,7 +101,7 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
         SelectedCategory is not null && MainModel.Categories.IndexOf(SelectedCategory) > 0;
 
     [RelayCommand(CanExecute = nameof(CanMoveSelectedCategoryDown))]
-    void MoveSelectedCategoryDown()
+    async Task MoveSelectedCategoryDown()
     {
         if (SelectedCategory is null) return;
 
@@ -110,7 +111,7 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
             var category = SelectedCategory;
             MainModel.Categories.RemoveAt(index);
             MainModel.Categories.Insert(index + 1, category);
-            dbService.WriteMainModel(MainModel);
+            await dbService.WriteMainModel(MainModel);
             SelectedCategory = category;
         }
     }
@@ -142,7 +143,7 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
                 anyChanged = true;
             }
             if (anyChanged)
-                dbService.WriteMainModel(MainModel);
+                await dbService.WriteMainModel(MainModel);
         }
     }
 
@@ -154,7 +155,7 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
         if (await dialogService.Question("Remove Category Item", $"Are you sure you want to remove the category item '{SelectedCategoryItem.Name}' for '{SelectedCategory.Name}'?"))
         {
             SelectedCategory.Items.Remove(SelectedCategoryItem);
-            dbService.WriteMainModel(MainModel);
+            await dbService.WriteMainModel(MainModel);
             SelectedCategoryItem = null;
         }
     }
@@ -162,7 +163,7 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
         SelectedCategoryItem is not null;
 
     [RelayCommand(CanExecute = nameof(CanMoveSelectedCategoryItemUp))]
-    void MoveSelectedCategoryItemUp()
+    async Task MoveSelectedCategoryItemUp()
     {
         if (SelectedCategory is null || SelectedCategoryItem is null) return;
         var index = SelectedCategory.Items.IndexOf(SelectedCategoryItem);
@@ -171,7 +172,7 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
             var categoryItem = SelectedCategoryItem;
             SelectedCategory.Items.RemoveAt(index);
             SelectedCategory.Items.Insert(index - 1, categoryItem);
-            dbService.WriteMainModel(MainModel);
+            await dbService.WriteMainModel(MainModel);
             SelectedCategoryItem = categoryItem;
         }
     }
@@ -179,7 +180,7 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
         SelectedCategoryItem is not null && SelectedCategory is not null && SelectedCategory.Items.IndexOf(SelectedCategoryItem) > 0;
 
     [RelayCommand(CanExecute = nameof(CanMoveSelectedCategoryItemDown))]
-    void MoveSelectedCategoryItemDown()
+    async Task MoveSelectedCategoryItemDown()
     {
         if (SelectedCategory is null || SelectedCategoryItem is null) return;
         var index = SelectedCategory.Items.IndexOf(SelectedCategoryItem);
@@ -188,7 +189,7 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
             var categoryItem = SelectedCategoryItem;
             SelectedCategory.Items.RemoveAt(index);
             SelectedCategory.Items.Insert(index + 1, categoryItem);
-            dbService.WriteMainModel(MainModel);
+            await dbService.WriteMainModel(MainModel);
             SelectedCategoryItem = categoryItem;
         }
     }
@@ -216,7 +217,7 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
                 anyChanged = true;
             }
             if (anyChanged)
-                dbService.WriteMainModel(MainModel);
+                await dbService.WriteMainModel(MainModel);
         }
     }
     bool CanAddNewCategoryItemEnumValue() =>
@@ -230,7 +231,7 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
         if (await dialogService.Question("Remove Enum Value", $"Are you sure you want to remove the enum value '{SelectedCategoryItemEnumValue}' for '{SelectedCategoryItem.Name}' under the category '{SelectedCategory.Name}'?"))
         {
             SelectedCategoryItem.EnumValues.Remove(SelectedCategoryItemEnumValue);
-            dbService.WriteMainModel(MainModel);
+            await dbService.WriteMainModel(MainModel);
             SelectedCategoryItemEnumValue = null;
         }
     }
@@ -238,7 +239,7 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
         SelectedCategoryItem is not null && SelectedCategoryItemEnumValue is not null && !SelectedCategoryItem.IsBoolean;
 
     [RelayCommand(CanExecute = nameof(CanMoveSelectedCategoryUpEnumValue))]
-    void MoveSelectedCategoryUpEnumValue()
+    async Task MoveSelectedCategoryUpEnumValue()
     {
         if (SelectedCategoryItem is null || SelectedCategoryItemEnumValue is null) return;
         var index = SelectedCategoryItem.EnumValues.IndexOf(SelectedCategoryItemEnumValue);
@@ -247,7 +248,7 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
             var enumValue = SelectedCategoryItemEnumValue;
             SelectedCategoryItem.EnumValues.RemoveAt(index);
             SelectedCategoryItem.EnumValues.Insert(index - 1, enumValue);
-            dbService.WriteMainModel(MainModel);
+            await dbService.WriteMainModel(MainModel);
             SelectedCategoryItemEnumValue = enumValue;
         }
     }
@@ -255,7 +256,7 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
         SelectedCategoryItem is not null && SelectedCategoryItemEnumValue is not null && !SelectedCategoryItem.IsBoolean && SelectedCategoryItem.EnumValues.IndexOf(SelectedCategoryItemEnumValue) > 0;
 
     [RelayCommand(CanExecute = nameof(CanMoveSelectedCategoryDownEnumValue))]
-    void MoveSelectedCategoryDownEnumValue()
+    async Task MoveSelectedCategoryDownEnumValue()
     {
         if (SelectedCategoryItem is null || SelectedCategoryItemEnumValue is null) return;
         var index = SelectedCategoryItem.EnumValues.IndexOf(SelectedCategoryItemEnumValue);
@@ -264,7 +265,7 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
             var enumValue = SelectedCategoryItemEnumValue;
             SelectedCategoryItem.EnumValues.RemoveAt(index);
             SelectedCategoryItem.EnumValues.Insert(index + 1, enumValue);
-            dbService.WriteMainModel(MainModel);
+            await dbService.WriteMainModel(MainModel);
             SelectedCategoryItemEnumValue = enumValue;
         }
     }
@@ -290,7 +291,7 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
                 anyChanged = true;
             }
             if (anyChanged)
-                dbService.WriteMainModel(MainModel);
+                await dbService.WriteMainModel(MainModel);
         }
     }
 
@@ -301,7 +302,7 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
         if (await dialogService.Question("Remove Folder", $"Are you sure you want to remove the folder '{SelectedFolder.Path}'?"))
         {
             MainModel.Folders.Remove(SelectedFolder);
-            dbService.WriteMainModel(MainModel);
+            await dbService.WriteMainModel(MainModel);
             SelectedFolder = null;
         }
     }
@@ -327,7 +328,7 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
                 anyChanged = true;
             }
             if (anyChanged)
-                dbService.WriteMainModel(MainModel);
+                await dbService.WriteMainModel(MainModel);
         }
     }
 
@@ -338,7 +339,7 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
         if (await dialogService.Question("Remove Group", $"Are you sure you want to remove the group '{SelectedGroup.Name}'?"))
         {
             MainModel.Groups.Remove(SelectedGroup);
-            dbService.WriteMainModel(MainModel);
+            await dbService.WriteMainModel(MainModel);
             SelectedGroup = null;
         }
     }
@@ -347,7 +348,7 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(RemoveGroupAlternativeNameCommand))]
-    public partial MainModelGroupAlternativeName? SelectedGroupAlternativeName { get; set; }
+    public partial string? SelectedGroupAlternativeName { get; set; }
 
     [RelayCommand]
     async Task AddNewGroupAlternativeName()
@@ -357,14 +358,14 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
         if (await dialogService.InputValue<string>("New Group Alternative Name") is { } newGroupAlternativeName)
         {
             var anyChanged = false;
-            if (!SelectedGroup.AlternativeNames.Any(an => an.Name.Equals(newGroupAlternativeName, StringComparison.CurrentCultureIgnoreCase)))
+            if (!SelectedGroup.AlternativeNames.Any(an => an.Equals(newGroupAlternativeName, StringComparison.CurrentCultureIgnoreCase)))
             {
-                SelectedGroup.AlternativeNames.Add(new() { Name = newGroupAlternativeName });
+                SelectedGroup.AlternativeNames.Add(newGroupAlternativeName);
                 SelectedGroupAlternativeName = SelectedGroup.AlternativeNames[^1];
                 anyChanged = true;
             }
             if (anyChanged)
-                dbService.WriteMainModel(MainModel);
+                await dbService.WriteMainModel(MainModel);
         }
     }
 
@@ -373,10 +374,10 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
     {
         if (SelectedGroup is null || SelectedGroupAlternativeName is null) return;
 
-        if (await dialogService.Question("Remove Group Alternative Name", $"Are you sure you want to remove the group alternative name '{SelectedGroupAlternativeName.Name}' for '{SelectedGroup.Name}'?"))
+        if (await dialogService.Question("Remove Group Alternative Name", $"Are you sure you want to remove the group alternative name '{SelectedGroupAlternativeName}' for '{SelectedGroup.Name}'?"))
         {
             SelectedGroup.AlternativeNames.Remove(SelectedGroupAlternativeName);
-            dbService.WriteMainModel(MainModel);
+            await dbService.WriteMainModel(MainModel);
             SelectedGroupAlternativeName = null;
         }
     }
@@ -404,7 +405,7 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
                 anyChanged = true;
             }
             if (anyChanged)
-                dbService.WriteMainModel(MainModel);
+                await dbService.WriteMainModel(MainModel);
         }
     }
 
@@ -415,7 +416,7 @@ public sealed partial class SettingsPageViewModel : ViewModelBase
         if (await dialogService.Question("Remove Group Member", $"Are you sure you want to remove the group member '{SelectedGroupMember.Name}' from the group '{SelectedGroup.Name}'?"))
         {
             SelectedGroup.Members.Remove(SelectedGroupMember);
-            dbService.WriteMainModel(MainModel);
+            await dbService.WriteMainModel(MainModel);
             SelectedGroupMember = null;
         }
     }

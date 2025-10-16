@@ -4,8 +4,9 @@ using System.Collections.Generic;
 
 namespace VideoTagger.Models;
 
-class DbModel(DbContextOptions<DbModel> options) : DbContext(options)
+public class DbModel(DbContextOptions<DbModel> options) : DbContext(options)
 {
+    public DbSet<DbMisc> Misc { get; set; } = null!;
     public DbSet<DbModelVideoCacheEntry> VideoCacheEntries { get; set; } = null!;
     public DbSet<DbModelVideoCaccheEntryTag> VideoCacheEntryTags { get; set; } = null!;
     public DbSet<DbModelVideoCacheEntryTagItem> VideoCacheEntryTagItems { get; set; } = null!;
@@ -13,94 +14,109 @@ class DbModel(DbContextOptions<DbModel> options) : DbContext(options)
     public DbSet<DbModelCategoryItem> CategoryItems { get; set; } = null!;
     public DbSet<DbModelCategoryItemEnumValue> CategoryItemEnumValues { get; set; } = null!;
     public DbSet<DbModelGroup> Groups { get; set; } = null!;
-    public DbSet<DbModelGroupAlternativeName> GroupAlternativeNames { get; set; } = null!;
     public DbSet<DbModelGroupMember> GroupMembers { get; set; } = null!;
-    public DbSet<DbModelGroupMemberAlternativeName> GroupMemberAlternativeNames { get; set; } = null!;
     public DbSet<DbModelFolder> Folders { get; set; } = null!;
+    public DbSet<DbModelVideoCacheCoverImage> VideoCacheCoverImages { get; set; } = null!;
 }
 
-class DbModelVideoCacheEntry
+public class DbMisc
+{
+    public const int CurrentDatabaseVersion = 1;
+    public int Id { get; set; }
+    public int DatabaseVersion { get; set; }
+    public bool IsDirty { get; set; }
+}
+
+[Index(nameof(Path), IsUnique = true)]
+public class DbModelVideoCacheEntry
 {
     public int Id { get; set; }
     public string Path { get; set; } = null!;
-    public string? CoverImageFileName { get; set; }
+    public DbModelVideoCacheCoverImage? CoverImage { get; set; }
     public DateTime Date { get; set; }
-    public ICollection<DbModelVideoCaccheEntryTag> Tags { get; } = null!;
+    public IList<DbModelVideoCaccheEntryTag> Tags { get; } = [];
 }
 
-class DbModelVideoCaccheEntryTag
+public class DbModelVideoCacheCoverImage
 {
     public int Id { get; set; }
     public DbModelVideoCacheEntry VideoCacheEntry { get; } = null!;
-    public DbModelGroup? Group { get; set; }
-    public DbModelGroupMember? Member { get; set; }
-    public ICollection<DbModelVideoCacheEntryTagItem> Items { get; } = null!;
+    public byte[] ImageData { get; set; } = null!;
 }
 
-class DbModelVideoCacheEntryTagItem
+[Index(nameof(VideoCacheEntryId), nameof(MemberId), IsUnique = true)]
+public class DbModelVideoCaccheEntryTag
 {
     public int Id { get; set; }
-    public DbModelVideoCaccheEntryTag VideoCacheEntryTag { get; } = null!;
-    public DbModelCategoryItem CategoryItem { get; } = null!;
-    public bool? BooleanValue { get; set; }
-    public string? EnumValue { get; set; }
+    public int VideoCacheEntryId { get; }
+    public DbModelVideoCacheEntry VideoCacheEntry { get; } = null!;
+    public int MemberId { get; set; }
+    public DbModelGroupMember? Member { get; set; }
+    public IList<DbModelVideoCacheEntryTagItem> Items { get; } = [];
 }
 
-class DbModelCategory
+[Index(nameof(VideoCacheEntryTagId), nameof(CategoryItemId), IsUnique = true)]
+public class DbModelVideoCacheEntryTagItem
+{
+    public int Id { get; set; }
+    public int VideoCacheEntryTagId { get; }
+    public DbModelVideoCaccheEntryTag VideoCacheEntryTag { get; } = null!;
+    public int CategoryItemId { get; }
+    public DbModelCategoryItem CategoryItem { get; } = null!;
+    public bool? BooleanValue { get; set; }
+    public DbModelCategoryItemEnumValue? EnumValue { get; set; }
+}
+
+[Index(nameof(Name), IsUnique = true)]
+public class DbModelCategory
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;
-    public ICollection<DbModelCategoryItem> Items { get; } = null!;
+    public IList<DbModelCategoryItem> Items { get; } = [];
 }
 
-class DbModelCategoryItem
+[Index(nameof(CategoryId), nameof(Name), IsUnique = true)]
+public class DbModelCategoryItem
 {
     public int Id { get; set; }
+    public int CategoryId { get; }
     public DbModelCategory Category { get; } = null!;
     public string Name { get; set; } = null!;
     public bool IsBoolean { get; set; }
     public string? BooleanRegex { get; set; }
-    public ICollection<DbModelCategoryItemEnumValue> EnumValues { get; } = null!;
+    public IList<DbModelCategoryItemEnumValue> EnumValues { get; } = [];
 }
 
-class DbModelCategoryItemEnumValue
+[Index(nameof(CategoryItemId), nameof(EnumValue), IsUnique = true)]
+public class DbModelCategoryItemEnumValue
 {
     public int Id { get; set; }
+    public int CategoryItemId { get; }
+    public DbModelCategoryItem CategoryItem { get; } = null!;
     public string EnumValue { get; set; } = null!;
     public string? Regex { get; set; }
 }
 
-class DbModelGroup
+[Index(nameof(Name), IsUnique = true)]
+public class DbModelGroup
 {
     public int Id { get; set; }
     public string Name { get; set; } = null!;
-    public ICollection<DbModelGroupAlternativeName> AlternativeNames { get; } = null!;
-    public ICollection<DbModelGroupMember> Members { get; } = null!;
+    public string[] AlternativeNames { get; set; } = [];
+    public IList<DbModelGroupMember> Members { get; } = [];
 }
 
-class DbModelGroupAlternativeName
+[Index(nameof(GroupId), nameof(Name), IsUnique = true)]
+public class DbModelGroupMember
 {
     public int Id { get; set; }
-    public DbModelGroup Group { get; } = null!;
-    public string AlternativeName { get; set; } = null!;
-}
-
-class DbModelGroupMember
-{
-    public int Id { get; set; }
+    public int GroupId { get; }
     public DbModelGroup Group { get; } = null!;
     public string Name { get; set; } = null!;
-    public ICollection<DbModelGroupMemberAlternativeName> AlternativeNames { get; } = null!;
+    public string[] AlternativeNames { get; set; } = [];
 }
 
-class DbModelGroupMemberAlternativeName
-{
-    public int Id { get; set; }
-    public DbModelGroupMember GroupMember { get; } = null!;
-    public string AlternativeName { get; set; } = null!;
-}
-
-class DbModelFolder
+public class DbModelFolder
 {
     public int Id { get; set; }
     public string Path { get; set; } = null!;
