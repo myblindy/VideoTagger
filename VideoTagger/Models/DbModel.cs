@@ -61,9 +61,10 @@ public class DbModelVideoCacheEntryTagItem
     public int Id { get; set; }
     public int VideoCacheEntryTagId { get; }
     public DbModelVideoCaccheEntryTag VideoCacheEntryTag { get; } = null!;
-    public int CategoryItemId { get; }
+    public int CategoryItemId { get; set; }
     public DbModelCategoryItem CategoryItem { get; } = null!;
     public bool? BooleanValue { get; set; }
+    public int? EnumValueId { get; set; }
     public DbModelCategoryItemEnumValue? EnumValue { get; set; }
 }
 

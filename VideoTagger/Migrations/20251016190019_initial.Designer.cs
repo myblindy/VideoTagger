@@ -11,8 +11,8 @@ using VideoTagger.Models;
 namespace VideoTagger.Migrations
 {
     [DbContext(typeof(DbModel))]
-    [Migration("20251016190019_initial")]
-    partial class initial
+    [Migration("20251016190019_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

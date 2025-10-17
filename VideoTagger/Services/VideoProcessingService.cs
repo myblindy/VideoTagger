@@ -45,7 +45,7 @@ public sealed partial class VideoProcessingService(
         void ProcessVideo(string filePath)
         {
             var result = new MainModelVideoCacheEntry { Path = filePath };
-            Func<byte[]?>? coverImageBytes = null;
+            Func<byte[]?>? coverImageBytesBuilder = null;
 
             try
             {
@@ -137,11 +137,11 @@ public sealed partial class VideoProcessingService(
                     });
 
                 // cover image
-                coverImageBytes = () => GetVideoCoverImageBytes(filePath, AVHWDeviceType.AV_HWDEVICE_TYPE_NONE);
+                coverImageBytesBuilder = () => GetVideoCoverImageBytes(filePath, AVHWDeviceType.AV_HWDEVICE_TYPE_NONE);
             }
             finally
             {
-                dbService.QueueVideoCacheEntryUpdate(result, coverImageBytes);
+                dbService.QueueVideoCacheEntryUpdate(result, coverImageBytesBuilder);
             }
         }
     }
